@@ -1,0 +1,294 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.carousel {
+  width: 100%; /* Full width of the viewport */
+  height: 100vh; /* Full viewport height */
+  min-height: 500px; /* Minimum height */
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0 auto; /* Center the carousel */
+  position: relative;
+}
+
+.item .img-box {
+  position: absolute;
+  left: 0;
+  top: 0; /* Default position for desktop */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure image covers the entire container */
+  object-position: center; /* Center the image */
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, .2));
+}
+
+.process-flow {
+  text-align: center;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+.process-flow p{
+  font-weight:bold;
+}
+.process-flow h2 {
+  font-size: 28px;
+  color: #4CAF50;
+  margin-bottom: 20px;
+}
+
+.process-steps {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping to the next line */
+  justify-content: center; /* Center horizontally */
+  gap: 20px; /* Space between steps */
+  padding: 10px;
+}
+
+.step {
+  flex: 1 1 calc(33.333% - 20px); /* 3 steps per line with gaps */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+}
+
+.step-image {
+  width: 400px; /* Adjust size as needed */
+  height: 200px; /* Adjust size as needed */
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.arrow-right {
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid #333;
+  margin: 10px 0;
+}
+
+.step:last-child .arrow-right {
+  display: none; /* Hide arrow on the last step */
+}
+
+@media (max-width: 768px) {
+  .carousel {
+    height: calc(100vh - 100px); /* Adjust height based on navbar height */
+  }
+
+  .item .info-box {
+    top: calc(100% + 10px); /* Position below the carousel */
+    left: 50%; /* Center horizontally */
+    width: 40%; /* Adjust width for mobile */
+    max-width: 300px; /* Max width */
+    height: 200px; /* Reduced height for mobile */
+    transform: translateX(-50%); /* Center horizontally */
+    padding: 10px;
+  }
+  
+  .step {
+    flex: 1 1 calc(50% - 20px); /* 2 steps per line on smaller screens */
+  }
+
+  .step-image {
+    width: 200px;
+    height: 200px;
+  }
+
+  .arrow-right {
+    border-left-width: 8px;
+  }
+  
+  .thumb {
+    position: absolute;
+    right: 5%;
+    top: calc(100% + 50px); /* Adjust thumb position */
+    transform: translateY(0);
+    list-style: none;
+    z-index: 100;
+  }
+
+  .thumb li {
+    width: 60px; /* Smaller thumbnails for mobile */
+    height: 60px;
+  }
+}
+
+@media (max-width: 320px) {
+  .carousel {
+    height: calc(100vh - 50px); /* Adjust height based on navbar height */
+  }
+
+  .item .info-box {
+    width: 90%; /* Further adjust width for small screens */
+    max-width: 280px; /* Max width */
+    height: 180px; /* Reduced height for very small screens */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Center horizontally */
+    padding: 10px;
+  }
+
+  .step {
+    flex: 1 1 100%; /* 1 step per line on very small screens */
+  }
+  
+  .step-image {
+    width: 120px;
+    height: 120px;
+  }
+
+  .arrow-right {
+    border-left-width: 6px;
+  }
+  
+  .info-item h2 {
+    font-size: 1.25rem; /* Smaller font size for headings */
+  }
+
+  .info-item p {
+    font-size: 0.75rem; /* Smaller font size for paragraphs */
+  }
+
+  .btn {
+    width: 140px; /* Further adjust button width */
+    height: 35px; /* Further adjust button height */
+    font-size: 12px;
+  }
+
+  .thumb li {
+    width: 60px; /* Further smaller thumbnails */
+    height: 60px;
+  }
+}
+
+.item .img-box::before {
+  content: '';
+  position: absolute;
+  right: 30%;
+  width: 500px;
+  height: 100%;
+  background: rgba(255, 255, 255, .8);
+  border-radius: 50%;
+  filter: blur(200px);
+}
+
+.item.active .img-box,
+.item.previously-active .img-box {
+  transition-delay: .2s;
+}
+
+.item.active .img-box {
+  transform: translateY(0);
+}
+
+.item.back-active .img-box {
+  transition: none;
+}
+
+.item:nth-child(1) .img-box,
+.item:nth-child(2) .img-box,
+.item:nth-child(3) .img-box,
+.item:nth-child(4) .img-box {
+  background: white;
+}
+
+.item .info-box {
+  position: absolute;
+  left: 5%;
+  top: 50%; /* Original position for desktop */
+  transform: translateY(-50%);
+  width: 450px; /* Original width */
+  height: 280px; /* Original height */
+  z-index: 1;
+}
+
+.item.active .info-box {
+  z-index: 2;
+}
+
+.info-box .info-slider {
+  transition: .7s cubic-bezier(0.68, -0.55, 0.1, 1);
+}
+
+.info-slider .info-item {
+  height: 280px; /* Original height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #fff;
+  transform: translateY(calc(var(--i) * 100%));
+}
+
+.info-item h2 {
+  font-size: 40px; /* Original font size */
+  line-height: 1;
+}
+
+.info-item p {
+  font-size: 16px; /* Original font size */
+  margin: 15px 0 20px;
+  text-align: justify;
+}
+
+.info-item .btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 180px; /* Original button width */
+  height: 47px; /* Original button height */
+  background: transparent;
+  border: 2px solid #fff;
+  border-radius: 40px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+  font-size: 16px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.thumb {
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  list-style: none;
+  z-index: 100;
+}
+
+.thumb li {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+  cursor: pointer;
+  margin: 25px 0;
+}
+
+.thumb li.selected {
+  border: 3px solid #fff;
+}
+
+.thumb li.disabled {
+  pointer-events: none;
+}
+
+.thumb li img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

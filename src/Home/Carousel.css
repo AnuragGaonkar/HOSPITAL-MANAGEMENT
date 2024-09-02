@@ -1,0 +1,199 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;400;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.carousel {
+    min-height: 500px; /* Minimum height */
+    width: 100%; /* Ensure full width */
+    overflow: hidden; /* Hide overflow */
+}
+
+/* Ensure the image inside the carousel is centered and covers the container */
+.img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensure the image covers the entire carousel area */
+    object-position: center; /* Center the image */
+}
+
+.item {
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.7s ease;
+}
+
+.item.active {
+    opacity: 1;
+}
+
+.item:not(.active) {
+    opacity: 0;
+}
+
+.img-box {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%; /* Full height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Hide overflow */
+}
+
+.info-box {
+    position: relative;
+    left: 5%;
+    top: calc(100% + 20px); /* Move info-box below the carousel */
+    transform: translateY(0); /* Remove translation adjustment */
+    width: 90%; /* Responsive width */
+    max-width: 450px; /* Max width */
+    padding: 10px; /* Padding inside the info box */
+    background: rgba(0, 0, 0, 0.5); /* Translucent background */
+    border-radius: 10px; /* Rounded corners */
+    z-index: 1;
+}
+
+.info-slider {
+    transition: transform 0.7s cubic-bezier(0.68, -0.55, 0.27, 1);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: #fff;
+    transform: translateY(calc(var(--i) * 100%));
+}
+
+.info-item h2 {
+    font-size: 2rem; /* Responsive font size */
+    line-height: 1;
+}
+
+.info-item p {
+    font-size: 1rem; /* Responsive font size */
+    margin: 15px 0 20px;
+    text-align: justify;
+}
+
+.btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 180px;
+    height: 47px;
+    background: transparent;
+    border: 2px solid #fff;
+    border-radius: 40px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.thumb {
+    position: absolute;
+    right: 5%;
+    top: 50%;
+    transform: translateY(-50%);
+    list-style: none;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center align thumbnails */
+}
+
+.thumb li {
+    width: 95px;
+    height: 95px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    margin: 10px 0; /* Adjusted margin for better fit */
+    overflow: hidden;
+}
+
+.thumb li.selected {
+    border: 3px solid #fff;
+}
+
+.thumb li.disabled {
+    pointer-events: none;
+}
+
+.thumb li img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .info-box {
+        width: 90%; /* Further adjust width */
+        left: 50%; /* Center horizontally */
+        top: calc(100% + 10px); /* Move info-box further down */
+        transform: translateX(-50%); /* Center horizontally */
+        top: 90%;
+        padding: 10px;
+    }
+
+    .info-item h2 {
+        font-size: 1.5rem; /* Smaller font size for headings */
+    }
+
+    .info-item p {
+        font-size: 0.875rem; /* Smaller font size for paragraphs */
+    }
+
+    .btn {
+        width: 160px; /* Adjust button width */
+        height: 40px; /* Adjust button height */
+        font-size: 14px;
+    }
+
+    .thumb {
+        right: 10px;
+        top: 35%;
+    }
+
+    .thumb li {
+        width: 70px; /* Smaller thumbnails */
+        height: 70px;
+    }
+}
+
+@media (max-width: 320px) {
+    .info-box {
+        width: 90%; /* Further adjust width */
+        left: 50%; /* Center horizontally */
+        top: calc(100% + 10px); /* Move info-box further down */
+        transform: translateX(-50%); /* Center horizontally */
+        padding: 10px;
+    }
+
+    .info-item h2 {
+        font-size: 1.25rem; /* Smaller font size for headings */
+    }
+
+    .info-item p {
+        font-size: 0.75rem; /* Smaller font size for paragraphs */
+    }
+
+    .btn {
+        width: 140px; /* Further adjust button width */
+        height: 35px; /* Further adjust button height */
+        font-size: 12px;
+    }
+
+    .thumb li {
+        width: 60px; /* Further smaller thumbnails */
+        height: 60px;
+    }
+}

@@ -1,0 +1,269 @@
+/* Navbar Styles */
+.user-navbar {
+  position: fixed; /* Fixed positioning to stay on top */
+  top: 0;
+  display: flex;
+  align-items: center;
+  background-color: #333;
+  padding: 10px;
+  z-index: 1000; /* High z-index to stay on top */
+  width: 100%;
+  height: 60px; /* Define a height for the Navbar */
+  box-sizing: border-box; /* Ensure padding and border are included in the width/height */
+  justify-content: space-between; /* Space between logo/title and profile pic */
+}
+
+.user-navbar-logo {
+  height: 50px; /* Ensure the height is set appropriately */
+}
+
+.user-navbar-title {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  margin-left: 20px; /* Space between logo and title */
+  text-decoration: none;
+  flex-grow: 1; /* Allow the title to take available space */
+}
+
+/* Profile Picture */
+.user-profile-toggle {
+  position: relative;
+}
+
+/* Ensure profile logo is displayed */
+.user-profile-logo {
+  width: 50px; /* Adjust as needed */
+  height: 50px; /* Adjust as needed */
+  border-radius: 50%;
+  display: block; /* Ensure it is displayed */
+  margin: 10px auto; /* Center the logo if needed */
+}
+
+/* Profile picture for navbar */
+.user-profile-pic {
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Dropdown for Profile Picture */
+.user-profile-dropdown {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: 50px; /* Position it just below the profile picture */
+  right: 0;
+  background-color: #333;
+  min-width: 180px; /* Ensure width is sufficient */
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1002; /* Ensure dropdown content is on top */
+}
+
+/* Show dropdown when profile menu is open */
+.user-profile-dropdown.show {
+  display: block; /* Show dropdown */
+}
+
+.user-profile-dropdown .user-dropdown-item {
+  color: white;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.user-profile-dropdown .user-dropdown-item:hover {
+  background-color: #575757;
+}
+
+/* Desktop Menu */
+.user-nav-links {
+  list-style-type: none;
+  display: flex;
+  margin-left: auto;
+  padding-left: 40px; /* Add padding to the left */
+  position: relative; /* For dropdown positioning */
+}
+
+.user-nav-links li {
+  margin: 0 20px; /* Adjusted margin to fit layout */
+  position: relative; /* Add position relative for dropdown positioning */
+}
+
+.user-nav-links li a {
+  color: white;
+  text-decoration: none;
+  padding: 10px;
+  position: relative;
+}
+
+.user-nav-links li a.selected::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 3px;
+  background-color: white;
+  bottom: -5px; /* Positioning the underline */
+  left: 0;
+}
+
+.user-nav-links li a::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  background-color: white;
+  bottom: 0;
+  left: 0;
+  transition: width 0.3s ease;
+}
+
+.user-nav-links li a:hover::before {
+  width: 100%;
+}
+
+/* Mobile Menu */
+.user-menu-btn {
+  display: none; /* Hidden by default */
+}
+
+/* Mobile Menu Overlay */
+.user-overlay {
+  display: none; /* Hidden by default */
+}
+
+/* Mobile Menu */
+.user-mobile-menu {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 75%; /* Adjusted width to ensure proper visibility */
+  height: 100vh; /* Full height */
+  background-color: #333; /* Dark background */
+  color: white;
+  transition: transform 0.3s ease-in-out; /* Smooth slide in/out */
+  transform: translateX(100%); /* Initially off-screen */
+  z-index: 1000; /* Ensure it is above other content */
+}
+
+.user-mobile-menu.open {
+  display: block; /* Ensure it is visible when opened */
+  transform: translateX(0); /* Slide in */
+}
+
+.user-mobile-nav-links {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-mobile-nav-links li {
+  padding: 15px;
+  border-bottom: 1px solid #444; /* Darker border for separation */
+}
+
+.user-mobile-nav-links li a {
+  color: white;
+  text-decoration: none;
+  display: block;
+}
+
+.user-mobile-nav-links li a.selected::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 3px;
+  background-color: white;
+  bottom: -5px; /* Positioning the underline */
+  left: 0;
+}
+
+.user-mobile-nav-links li a:hover {
+  background-color: #575757;
+}
+
+/* Profile Picture in Mobile Menu */
+.user-mobile-profile-pic {
+  width: 50px; /* Adjust width as needed */
+  height: 50px; /* Adjust height as needed */
+  border-radius: 50%;
+  display: block; /* Ensure it is displayed */
+  margin: 15px auto; /* Center the logo */
+}
+
+/* Close Button for Mobile Menu */
+.user-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+  padding: 10px;
+  margin: 10px;
+  text-align: right;
+  display: block;
+}
+
+/* Overlay for mobile menu */
+.user-overlay {
+  display: block; /* Always visible when menu is open */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999; /* Ensure it is above the mobile menu */
+}
+
+/* Media query for mobile */
+@media (max-width: 768px) {
+  .user-nav-links {
+    display: none;
+  }
+
+  .user-menu-btn {
+    display: block; /* Show menu button in mobile */
+  }
+
+  .user-profile-toggle {
+    display: block; /* Show profile toggle in mobile */
+  }
+
+  .user-profile-pic {
+    height: 40px;
+    width: 40px;
+  }
+
+  .user-profile-dropdown {
+    display: none; /* Ensure dropdown is hidden on mobile */
+  }
+
+  .user-mobile-menu {
+    display: block; /* Ensure mobile menu is visible */
+  }
+}
+
+/* Ensure profile logo is visible on desktop */
+@media (min-width: 769px) {
+  .user-profile-toggle.mobile {
+    display: none; /* Hide profile toggle on desktop */
+  }
+
+  .user-profile-logo {
+    display: block; /* Ensure profile logo is visible on desktop */
+  }
+
+  .user-mobile-menu {
+    display: none; /* Ensure mobile menu is hidden on desktop */
+  }
+
+  .user-overlay {
+    display: none; /* Ensure overlay is hidden on desktop */
+  }
+}
+
+.user-profile-logo {
+  display: block; /* Ensure profile logo is visible on desktop */
+}
