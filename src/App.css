@@ -1,0 +1,38 @@
+/* App.css */
+
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Ensure full viewport height */
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  height: 100%; /* Ensure full height */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Main content area */
+.App {
+  flex: 1; /* Take up available space */
+  padding-top: 60px; /* Add padding equal to the height of the Navbar */
+}
+
+/* Footer styles */
+.footer {
+  background-color: #4CAF50;
+  color: white;
+  text-align: center;
+  padding: 10px 0;
+  width: 100%;
+  bottom: 0%;
+}
