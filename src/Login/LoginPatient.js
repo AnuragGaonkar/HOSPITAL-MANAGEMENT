@@ -1,85 +1,83 @@
-// src/components/LoginPatient/LoginPatient.js
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import './LoginPatient.css';
 import Navbar from '../Navbar/Navbar';
 
 function LoginPatient() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
+    setSubmitting(true);
     try {
-      const response = await axios.post(
-        'http://localhost:5000/login/patient',
-        { email, password }
-      );      
-      localStorage.setItem('token', response.data.token); // Store token
-      alert('Login successful!');
-      navigate('/user', { state: { name: response.data.fullName } });
+      const response = await api.post('/login/patient', { email, password });
+      login(response.data);
+      const redirectTo = location.state?.from?.pathname || '/user';
+      navigate(redirectTo, { replace: true });
     } catch (err) {
-      console.error('Error during login:', err);
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-  };
-
-  const handleRegister = () => {
-    navigate('/register/patient');
   };
 
   return (
     <>
       <Navbar />
-      <div className="login-container">
-        <div className="login-toggle">
-          <button
-            onClick={() => {
-              setIsLogin(true);
-              navigate('/login/patient');
-            }}
-            className={isLogin ? 'active' : ''}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => {
-              setIsLogin(false);
-              handleRegister();
-            }}
-            className={!isLogin ? 'active' : ''}
-          >
-            Register
-          </button>
-        </div>
-        {isLogin ? (
-          <div className="login-form">
-            <h2>Login as Patient</h2>
-            <form onSubmit={handleLogin}>
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-tabs">
+            <span className="auth-tab active">Login</span>
+            <Link to="/register/patient" className="auth-tab">Register</Link>
+          </div>
+
+          <h2>Login as Patient</h2>
+          <p className="auth-subtitle">Access your appointments and medical records.</p>
+
+          <form onSubmit={handleLogin} noValidate>
+            <label>
+              Email
               <input
                 type="email"
-                placeholder="Email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
               />
+            </label>
+            <label>
+              Password
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
-              <button type="submit">Login</button>
-              {error && <p className="error-message">{error}</p>}
-            </form>
-          </div>
-        ) : null}
+            </label>
+
+            {error && <p className="auth-error">{error}</p>}
+
+            <button type="submit" className="auth-submit" disabled={submitting}>
+              {submitting ? <span className="auth-spinner" aria-hidden="true" /> : 'Login'}
+            </button>
+          </form>
+
+          <p className="auth-footnote">
+            New here? <Link to="/register/patient">Create a patient account</Link>
+          </p>
+        </div>
       </div>
     </>
   );

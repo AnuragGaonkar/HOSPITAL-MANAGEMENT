@@ -1,76 +1,149 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import logo from './logo.png';
+import useTheme from '../theme/useTheme';
+import EmergencyButton from '../Emergency/EmergencyButton';
+import { useAuth } from '../auth/AuthContext';
 import './Navbar.css';
 
-function Navbar({ showProfile = false, userName = '' }) {
+// NOTE: "Book Appointment" intentionally omitted for now — it should
+// only appear once a patient is logged in. Add it back into this array
+// (gated on `isAuthenticated`, see below) once that flow is ready.
+const NAV_ITEMS = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/about', label: 'About Us', end: false },
+];
+
+function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
+  const toggleMenu = () => setMenuOpen((open) => !open);
+  const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Lock body scroll while the mobile drawer is open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
+
+  const linkClass = ({ isActive }) => (isActive ? 'selected' : '');
+
+  const handleLogout = () => {
+    logout();
+    closeMenu();
+    navigate('/');
   };
 
-  const closeMenu = () => {
-    setMenuOpen(false);
-  };
+  const ThemeToggle = ({ className = '' }) => (
+    <button
+      type="button"
+      className={`theme-toggle ${className}`}
+      onClick={toggleTheme}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      <span className={`theme-toggle-icon ${theme}`} aria-hidden="true">
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </span>
+    </button>
+  );
+
+  const AuthLinks = ({ onNavigate }) =>
+    isAuthenticated ? (
+      <li className="dropdown">
+        <button type="button" className="dropbtn profile-dropbtn">
+          <span className="profile-avatar" aria-hidden="true">
+            {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+          </span>
+          <span className="nav-username">{user.name}</span>
+          <span className="dropbtn-caret">▾</span>
+        </button>
+        <div className="dropdown-content">
+          <NavLink to={user.role === 'hospital' ? '/hospital/dashboard' : '/user'} onClick={onNavigate}>
+            {user.role === 'hospital' ? 'Dashboard' : 'My Profile'}
+          </NavLink>
+          <button type="button" className="dropdown-logout" onClick={handleLogout}>
+            Log Out
+          </button>
+        </div>
+      </li>
+    ) : (
+      <li className="dropdown">
+        <button type="button" className="dropbtn">
+          Login
+          <span className="dropbtn-caret">▾</span>
+        </button>
+        <div className="dropdown-content">
+          <NavLink to="/login/hospital" onClick={onNavigate}>Login as a Hospital</NavLink>
+          <NavLink to="/login/patient" onClick={onNavigate}>Login as a Patient</NavLink>
+        </div>
+      </li>
+    );
 
   return (
     <>
-      <nav className="navbar">
-        <img src={logo} alt="Logo" className="logo" />
-        <a href="/" className="nav-title">HOSPITAL MANAGEMENT SYSTEM</a>
-        <button className="menu-btn" onClick={toggleMenu}>
-          ☰
-        </button>
-        <ul className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
-          <li>
-            <NavLink exact to="/" activeClassName="selected">Home</NavLink>
-          </li>
-          <li>
-            <NavLink to="/about" activeClassName="selected">About Us</NavLink>
-          </li>
-          {showProfile ? (
-            <li className="profile">
-              <span className="nav-title">{userName}</span>
-              <img src="/path/to/profile-logo.png" alt="Profile Logo" className="profile-logo" />
-            </li>
-          ) : (
-            <li className="dropdown">
-              <a href="#" className="dropbtn">Login</a>
-              <div className="dropdown-content">
-                <NavLink to="/login/institute">Login as a Institute</NavLink>
-                <NavLink to="/login/patient">Login as a Patient</NavLink>
-              </div>
-            </li>
-          )}
-        </ul>
+      <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
+        <a href="/" className="brand">
+          <img src={logo} alt="Hospital Management System logo" className="logo" />
+          <span className="nav-title">Hospital Management System</span>
+        </a>
+
+        <div className="navbar-right">
+          <ul className="nav-links">
+            {NAV_ITEMS.map((item) => (
+              <li key={item.to}>
+                <NavLink to={item.to} end={item.end} className={linkClass}>
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+            <li><ThemeToggle /></li>
+            <AuthLinks />
+          </ul>
+
+          <button
+            className="menu-btn"
+            onClick={toggleMenu}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+          >
+            <span className={`hamburger ${menuOpen ? 'is-open' : ''}`} />
+          </button>
+        </div>
       </nav>
-      {menuOpen && <div className="overlay" onClick={closeMenu}></div>}
-      <div className={`mobile-menu ${menuOpen ? 'open' : ''}`}>
-        <button className="close-btn" onClick={closeMenu}>×</button>
+
+      <div className={`overlay ${menuOpen ? 'overlay-open' : ''}`} onClick={closeMenu} />
+
+      <div className={`mobile-menu ${menuOpen ? 'open' : ''}`} aria-hidden={!menuOpen}>
+        <div className="mobile-menu-header">
+          <ThemeToggle className="theme-toggle-mobile" />
+          <button className="close-btn" onClick={closeMenu} aria-label="Close menu">×</button>
+        </div>
         <ul className="mobile-nav-links">
-          <li>
-            <NavLink exact to="/" activeClassName="selected" onClick={closeMenu}>Home</NavLink>
-          </li>
-          <li>
-            <NavLink to="/about" activeClassName="selected" onClick={closeMenu}>About Us</NavLink>
-          </li>
-          {showProfile ? (
-            <li className="profile">
-              <span className="nav-title">{userName}</span>
-              <img src="/path/to/profile-logo.png" alt="Profile Logo" className="profile-logo" />
+          {NAV_ITEMS.map((item, i) => (
+            <li key={item.to} style={{ transitionDelay: `${i * 40}ms` }}>
+              <NavLink to={item.to} end={item.end} className={linkClass} onClick={closeMenu}>
+                {item.label}
+              </NavLink>
             </li>
-          ) : (
-            <li className="dropdown">
-              <a href="#" className="dropbtn">Login</a>
-              <div className="dropdown-content">
-                <NavLink to="/login/doctor" onClick={closeMenu}>Login as a Institute</NavLink>
-                <NavLink to="/login/patient" onClick={closeMenu}>Login as a Patient</NavLink>
-              </div>
-            </li>
-          )}
+          ))}
+          <AuthLinks onNavigate={closeMenu} />
         </ul>
       </div>
+
+      {/* Mobile-only floating SOS control — hidden via CSS above the mobile breakpoint */}
+      <EmergencyButton />
     </>
   );
 }

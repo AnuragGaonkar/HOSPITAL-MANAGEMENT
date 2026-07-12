@@ -1,15 +1,22 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Patient = require('../models/Patient');
+const Hospital = require('../models/Hospital');
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/jwt');
+
 const router = express.Router();
+
+const SALT_ROUNDS = 10;
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
   },
   filename: function (req, file, cb) {
-    const fullName = req.body.fullName.replace(/[^a-zA-Z0-9]/g, '-'); // Remove any special characters
+    const fullName = (req.body.fullName || 'patient').replace(/[^a-zA-Z0-9]/g, '-');
     const fileExtension = path.extname(file.originalname);
     cb(null, `${fullName}-${Date.now()}${fileExtension}`);
   }
@@ -17,8 +24,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+function signToken(payload) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
 
-// Registration route
+// ---------- Patient registration ----------
 router.post('/register/patient', upload.single('profilePhoto'), async (req, res) => {
   try {
     const {
@@ -30,9 +40,6 @@ router.post('/register/patient', upload.single('profilePhoto'), async (req, res)
       additionalComments, aadhaarCardNumber, password
     } = req.body;
 
-    console.log('Received data:', req.body);
-    console.log('Received file:', req.file);
-
     if (!aadhaarCardNumber || !password) {
       return res.status(400).json({ message: 'Required fields are missing.' });
     }
@@ -42,13 +49,15 @@ router.post('/register/patient', upload.single('profilePhoto'), async (req, res)
       return res.status(400).json({ message: 'Aadhaar card number already registered.' });
     }
 
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
     const newPatient = new Patient({
       fullName, dob, age, gender, weight, height, contactNumber,
       email, address, emergencyContactName, emergencyContactRelation,
       emergencyContactNumber, allergies, medications, pastSurgeries,
       chronicConditions, familyHistory, insuranceProvider, policyNumber,
       groupNumber, insuranceContact, preferredDoctor, reasonForRegistration,
-      additionalComments, aadhaarCardNumber, password,
+      additionalComments, aadhaarCardNumber, password: hashedPassword,
       profilePhoto: req.file ? req.file.path : undefined,
     });
 
@@ -60,59 +69,103 @@ router.post('/register/patient', upload.single('profilePhoto'), async (req, res)
   }
 });
 
-// Login route
+// ---------- Patient login ----------
 router.post('/login/patient', async (req, res) => {
   try {
     const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
 
-    // Find patient by email
     const patient = await Patient.findOne({ email });
     if (!patient) {
-      return res.status(404).json({ message: 'Patient not found.' });
+      return res.status(404).json({ message: 'No account found with that email.' });
     }
 
-    // Validate password (replace this with proper hashing comparison)
-    if (patient.password !== password) {
-      return res.status(400).json({ message: 'Invalid password.' });
+    const isMatch = await bcrypt.compare(password, patient.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Incorrect password.' });
     }
 
-    // Generate and send token (replace with actual token generation logic)
-    const token = 'dummy-token'; // Replace this with actual JWT or other token
-    res.status(200).json({ token, fullName: patient.fullName });
+    const token = signToken({ id: patient._id, role: 'patient' });
+    res.status(200).json({
+      token,
+      role: 'patient',
+      fullName: patient.fullName,
+      id: patient._id,
+    });
   } catch (error) {
-    console.error('Error during login:', error);
+    console.error('Error during patient login:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
 
-router.post('/login/institute', async (req, res) => {
-  const { instituteId, password } = req.body;
-
+// ---------- Hospital registration ----------
+// NOTE: admin verification/approval is a separate feature to be built
+// later — Hospital.verificationStatus defaults to 'approved' for now
+// so this flow keeps working until that's in place.
+router.post('/register/hospital', async (req, res) => {
   try {
-    // Find institute by Login ID
-    const institute = await Institute.findOne({ 'Login ID': instituteId });
+    const { loginId, hospitalName, password, city, state, address, pincode } = req.body;
 
-    if (!institute) {
-      return res.status(400).json({ message: 'Institute not found' });
+    if (!loginId || !password || !hospitalName) {
+      return res.status(400).json({ message: 'Hospital name, login ID, and password are required.' });
     }
 
-    // Validate password
-    const isMatch = await bcrypt.compare(password, institute.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    const existing = await Hospital.findOne({ loginId });
+    if (existing) {
+      return res.status(400).json({ message: 'That login ID is already registered.' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ id: institute._id }, 'your_jwt_secret', {
-      expiresIn: '1h',
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const hospital = new Hospital({
+      loginId,
+      hospitalName,
+      password: hashedPassword,
+      city,
+      state,
+      address,
+      pincode,
     });
 
-    res.json({ token, name: institute.loginId });
+    await hospital.save();
+    res.status(201).json({ message: 'Hospital registered successfully!' });
   } catch (error) {
-    console.error('Error during institute login:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error registering hospital:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
 
+// ---------- Hospital login ----------
+router.post('/login/hospital', async (req, res) => {
+  try {
+    const { loginId, password } = req.body;
+    if (!loginId || !password) {
+      return res.status(400).json({ message: 'Login ID and password are required.' });
+    }
+
+    const hospital = await Hospital.findOne({ loginId });
+    if (!hospital) {
+      return res.status(400).json({ message: 'Hospital not found.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, hospital.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials.' });
+    }
+
+    const token = signToken({ id: hospital._id, role: 'hospital' });
+    res.json({
+      token,
+      role: 'hospital',
+      name: hospital.hospitalName,
+      id: hospital._id,
+    });
+  } catch (error) {
+    console.error('Error during hospital login:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 module.exports = router;

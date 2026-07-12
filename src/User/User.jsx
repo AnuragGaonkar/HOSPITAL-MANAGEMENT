@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './User.css';
 import logo from './logo.png';
 import axios from 'axios';
+import { useAuth } from '../auth/AuthContext';
 
 function User() {
-  const location = useLocation();
-  const { name } = location.state || { name: 'User' };
+  const { user, logout } = useAuth();
+  const name = user?.name || 'User';
+  const navigate = useNavigate();
 
   const [profilePic, setProfilePic] = useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -43,6 +45,12 @@ function User() {
     setMobileMenuOpen(false);
   };
 
+  const handleLogout = () => {
+    closeMenu();
+    logout();
+    navigate('/');
+  };
+
   return (
     <>
       <nav className="user-navbar">
@@ -71,7 +79,7 @@ function User() {
               onMouseLeave={() => setProfileMenuOpen(false)}
             >
               <a href="#/account" className="user-dropdown-item" onClick={closeMenu}>Profile</a>
-              <a href="/" className="user-dropdown-item" onClick={closeMenu}>Log Out</a>
+              <button type="button" className="user-dropdown-item user-dropdown-logout" onClick={handleLogout}>Log Out</button>
             </div>
           )}
         </div>
@@ -83,7 +91,7 @@ function User() {
           <li><a href="#" onClick={closeMenu}>Home</a></li>
           <li><a href="#" onClick={closeMenu}>Book an Appointment</a></li>
           <li><a href="#/account" onClick={closeMenu}>Profile</a></li>
-          <li><a href="/" onClick={closeMenu}>Log Out</a></li>
+          <li><button type="button" className="user-mobile-logout" onClick={handleLogout}>Log Out</button></li>
         </ul>
       </div>
 

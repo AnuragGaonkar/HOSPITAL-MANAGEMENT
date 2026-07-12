@@ -1,18 +1,88 @@
-/* Styles specific to the About component */
-.content {
-    text-align: center;
-    margin: 40px 20px;
-  }
-  
-  .content h2 {
-    font-size: 28px;
-    color: #4CAF50;
-    margin-bottom: 20px;
-  }
-  
-  .content p {
-    font-size: 18px;
-    color: #333;
-    line-height: 1.6;
-  }
-  
+.about-page {
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+.about-hero {
+  text-align: center;
+  padding: 64px 20px 48px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.about-hero h1 {
+  font-size: 32px;
+  margin: 0 0 16px;
+  color: var(--color-primary);
+}
+
+.about-hero p {
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.about-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 20px 56px;
+}
+
+.about-feature-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-med) var(--ease-smooth), box-shadow var(--dur-med) var(--ease-smooth);
+}
+
+.about-feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.about-feature-icon {
+  font-size: 30px;
+  margin-bottom: 14px;
+}
+
+.about-feature-card h3 {
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+
+.about-feature-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.about-mission {
+  background: var(--color-primary-dark);
+  color: #fff;
+  padding: 56px 20px;
+  text-align: center;
+}
+
+.about-mission h2 {
+  margin: 0 0 16px;
+  font-size: 24px;
+}
+
+.about-mission p {
+  max-width: 680px;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+@media (max-width: 480px) {
+  .about-hero h1 { font-size: 26px; }
+  .about-hero p { font-size: 15px; }
+}

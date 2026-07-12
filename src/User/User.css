@@ -72,6 +72,16 @@
   display: block;
 }
 
+.user-dropdown-logout,
+.user-mobile-logout {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
 .user-profile-dropdown .user-dropdown-item:hover {
   background-color: #575757;
 }
@@ -163,7 +173,8 @@
   border-bottom: 1px solid #444; /* Darker border for separation */
 }
 
-.user-mobile-nav-links li a {
+.user-mobile-nav-links li a,
+.user-mobile-nav-links li .user-mobile-logout {
   color: white;
   text-decoration: none;
   display: block;
