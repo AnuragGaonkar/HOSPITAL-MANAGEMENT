@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed:mumbai": "node scripts/seedMumbaiHospitals.js",
-    "seed:inventory": "node scripts/seedSampleInventory.js"
+    "seed:inventory": "node scripts/seedSampleInventory.js",
+    "seed:doctors": "node scripts/seedDoctors.js"
   },
   "keywords": [],
   "author": "",

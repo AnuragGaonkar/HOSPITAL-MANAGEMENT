@@ -1,16 +1,26 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Navbar from '../Navbar/Navbar';
+import DoctorsPanel from './DoctorsPanel';
 import api from '../api/client';
 import './Dashboard.css';
 
-function StatCard({ icon, label, value, hint, variant, delay }) {
+function StatCard({ icon, label, value, hint, variant, delay, onClick }) {
+  const clickable = !!onClick;
   return (
-    <div className={`stat-card ${variant ? `stat-card-${variant}` : ''}`} style={{ animationDelay: `${delay}ms` }}>
+    <div
+      className={`stat-card ${variant ? `stat-card-${variant}` : ''} ${clickable ? 'stat-card-clickable' : ''}`}
+      style={{ animationDelay: `${delay}ms` }}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
+    >
       <span className="stat-icon" aria-hidden="true">{icon}</span>
       <span className="stat-value">{value}</span>
       <span className="stat-label">{label}</span>
       {hint && <span className="stat-hint">{hint}</span>}
+      {clickable && <span className="stat-card-arrow" aria-hidden="true">→</span>}
     </div>
   );
 }
@@ -43,6 +53,15 @@ function Dashboard() {
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Doctors slide-over panel
+  const [doctorsPanelOpen, setDoctorsPanelOpen] = useState(false);
+  const [doctorsDepartment, setDoctorsDepartment] = useState(null);
+
+  // When the Low Stock card is clicked, we switch tabs and then need to
+  // scroll to + flash the low-stock rows once they've rendered.
+  const [pendingHighlight, setPendingHighlight] = useState(false);
+  const highlightTimeoutRef = useRef(null);
+
   const setTab = (tab) => setSearchParams(tab === 'inventory' ? { tab: 'inventory' } : {});
 
   useEffect(() => {
@@ -70,6 +89,33 @@ function Dashboard() {
     }
   }, [activeTab, loadInventory]);
 
+  // Scroll to + flash-highlight the low-stock rows twice, then clear.
+  useEffect(() => {
+    if (activeTab !== 'inventory' || !pendingHighlight || loadingInventory) return;
+
+    const rows = document.querySelectorAll('.inventory-table tr.low-stock');
+    if (rows.length === 0) {
+      setPendingHighlight(false);
+      return;
+    }
+
+    rows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    rows.forEach((row) => row.classList.add('flash-highlight'));
+
+    highlightTimeoutRef.current = setTimeout(() => {
+      rows.forEach((row) => row.classList.remove('flash-highlight'));
+      setPendingHighlight(false);
+    }, 1500);
+
+    return () => clearTimeout(highlightTimeoutRef.current);
+  }, [activeTab, pendingHighlight, loadingInventory, items]);
+
+  const handleLowStockClick = () => {
+    if (!overview?.lowStockCount) return;
+    setPendingHighlight(true);
+    setTab('inventory');
+  };
+
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
@@ -82,6 +128,11 @@ function Dashboard() {
     }
   };
 
+  const openDoctors = (department = null) => {
+    setDoctorsDepartment(department);
+    setDoctorsPanelOpen(true);
+  };
+
   return (
     <>
       <Navbar />
@@ -91,22 +142,26 @@ function Dashboard() {
             <h1>{overview?.hospitalName || 'Hospital Dashboard'}</h1>
             {overview?.city && <p className="dashboard-subtitle">{overview.city}</p>}
           </div>
-          <div className="dashboard-tabs">
-            <button
-              type="button"
-              className={activeTab === 'overview' ? 'active' : ''}
-              onClick={() => setTab('overview')}
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              className={activeTab === 'inventory' ? 'active' : ''}
-              onClick={() => setTab('inventory')}
-            >
-              Inventory
-            </button>
-          </div>
+        </div>
+
+        <div className="dashboard-layout">
+        <div className="dashboard-main">
+        <div className="dashboard-tabs">
+          <button
+            type="button"
+            className={activeTab === 'overview' ? 'active' : ''}
+            onClick={() => setTab('overview')}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'inventory' ? 'active' : ''}
+            onClick={() => setTab('inventory')}
+          >
+            Inventory
+          </button>
+          <span className={`dashboard-tabs-indicator ${activeTab === 'inventory' ? 'right' : ''}`} aria-hidden="true" />
         </div>
 
         {activeTab === 'overview' && (
@@ -117,21 +172,29 @@ function Dashboard() {
               <>
                 <div className="stats-grid">
                   <BedsCard bedsAvailable={overview.bedsAvailable} bedsTotal={overview.bedsTotal} delay={0} />
-                  <StatCard icon="🩺" label="Doctors on Staff" value={overview.doctorsCount} delay={60} />
+                  <StatCard
+                    icon="🩺"
+                    label="Doctors on Staff"
+                    value={overview.doctorsCount}
+                    hint="Tap to see the full list"
+                    delay={60}
+                    onClick={() => openDoctors(null)}
+                  />
                   <StatCard
                     icon="📅"
                     label="Today's Appointments"
                     value={overview.todaysAppointments}
-                    hint="Booking system coming soon"
+                    hint="Scheduled today"
                     delay={120}
                   />
                   <StatCard
                     icon="⚠️"
                     label="Low Stock Items"
                     value={overview.lowStockCount}
-                    hint={overview.lowStockCount > 0 ? 'Needs reordering' : 'All stocked'}
+                    hint={overview.lowStockCount > 0 ? 'Tap to jump to Inventory' : 'All stocked'}
                     variant={overview.lowStockCount > 0 ? 'warning' : undefined}
                     delay={180}
+                    onClick={overview.lowStockCount > 0 ? handleLowStockClick : undefined}
                   />
                 </div>
 
@@ -139,7 +202,7 @@ function Dashboard() {
                   <div className="alert-card">
                     <div className="alert-card-header">
                       <h3>⚠️ Low Stock Alerts</h3>
-                      <button type="button" className="alert-view-all" onClick={() => setTab('inventory')}>
+                      <button type="button" className="alert-view-all" onClick={handleLowStockClick}>
                         View in Inventory →
                       </button>
                     </div>
@@ -156,12 +219,30 @@ function Dashboard() {
                   </div>
                 )}
 
-                {overview.departments?.length > 0 && (
+                {overview.departmentBreakdown?.length > 0 && (
                   <div className="departments-card">
-                    <h3>Departments</h3>
-                    <div className="department-pills">
-                      {overview.departments.map((d) => (
-                        <span className="department-pill" key={d}>{d}</span>
+                    <div className="departments-card-header">
+                      <h3>Departments</h3>
+                      <span className="departments-hint">Tap a department to see its doctors</span>
+                    </div>
+                    <div className="department-grid">
+                      {overview.departmentBreakdown.map((dept, i) => (
+                        <button
+                          type="button"
+                          className="department-card"
+                          key={dept.department}
+                          onClick={() => openDoctors(dept.department)}
+                          style={{ animationDelay: `${300 + i * 40}ms` }}
+                        >
+                          <span className="department-card-name">{dept.department}</span>
+                          <span className="department-card-count">{dept.doctorCount}</span>
+                          <span className="department-card-label">
+                            doctor{dept.doctorCount === 1 ? '' : 's'}
+                          </span>
+                          <span className={`department-card-available ${dept.availableCount === 0 ? 'none' : ''}`}>
+                            {dept.availableCount} available now
+                          </span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -230,7 +311,62 @@ function Dashboard() {
             )}
           </section>
         )}
+        </div>
+
+        <aside className="dashboard-sidebar">
+          <div className="sidebar-card">
+            <h3>Hospital Info</h3>
+            <dl className="sidebar-info-list">
+              <div>
+                <dt>Address</dt>
+                <dd>{overview?.address || overview?.city || '—'}</dd>
+              </div>
+              <div>
+                <dt>City</dt>
+                <dd>{overview?.city || '—'}</dd>
+              </div>
+              <div>
+                <dt>Bed Occupancy</dt>
+                <dd>
+                  {overview ? `${overview.bedsTotal - overview.bedsAvailable} / ${overview.bedsTotal} occupied` : '—'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="sidebar-card">
+            <h3>Quick Actions</h3>
+            <Link to="/hospital/inventory/new" className="sidebar-action">+ Add Inventory Item</Link>
+            <button type="button" className="sidebar-action" onClick={() => openDoctors(null)}>
+              👥 View All Doctors
+            </button>
+            <button
+              type="button"
+              className="sidebar-action"
+              onClick={() => setTab(activeTab === 'inventory' ? 'overview' : 'inventory')}
+            >
+              🔁 Switch to {activeTab === 'inventory' ? 'Overview' : 'Inventory'}
+            </button>
+          </div>
+
+          {overview?.lowStockCount > 0 && (
+            <div className="sidebar-card sidebar-card-warning">
+              <h3>⚠️ Needs Attention</h3>
+              <p>{overview.lowStockCount} item{overview.lowStockCount === 1 ? '' : 's'} running low on stock.</p>
+              <button type="button" className="sidebar-action-warning" onClick={handleLowStockClick}>
+                Review Now →
+              </button>
+            </div>
+          )}
+        </aside>
+        </div>
       </div>
+
+      <DoctorsPanel
+        open={doctorsPanelOpen}
+        department={doctorsDepartment}
+        onClose={() => setDoctorsPanelOpen(false)}
+      />
     </>
   );
 }

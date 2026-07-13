@@ -66,6 +66,34 @@
   gap: 14px;
 }
 
+.booking-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+  font-size: 14px !important;
+  color: var(--color-ink) !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+}
+
+.booking-checkbox input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.booking-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.booking-banner.error {
+  background: rgba(217, 43, 43, 0.1);
+  color: #d92b2b;
+}
+
 .btn-primary {
   margin-top: 6px;
   border: none;

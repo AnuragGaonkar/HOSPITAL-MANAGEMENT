@@ -6,9 +6,8 @@ import EmergencyButton from '../Emergency/EmergencyButton';
 import { useAuth } from '../auth/AuthContext';
 import './Navbar.css';
 
-// NOTE: "Book Appointment" intentionally omitted for now — it should
-// only appear once a patient is logged in. Add it back into this array
-// (gated on `isAuthenticated`, see below) once that flow is ready.
+// "Book Appointment" is added dynamically below — only shown to
+// logged-in patients, so it's not in this static list.
 const NAV_ITEMS = [
   { to: '/', label: 'Home', end: true },
   { to: '/about', label: 'About Us', end: false },
@@ -19,6 +18,9 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
+  const navItems = isAuthenticated && user.role === 'patient'
+    ? [...NAV_ITEMS, { to: '/book-appointment', label: 'Book Appointment', end: false }]
+    : NAV_ITEMS;
   const navigate = useNavigate();
 
   const toggleMenu = () => setMenuOpen((open) => !open);
@@ -101,7 +103,7 @@ function Navbar() {
 
         <div className="navbar-right">
           <ul className="nav-links">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <li key={item.to}>
                 <NavLink to={item.to} end={item.end} className={linkClass}>
                   {item.label}
@@ -131,7 +133,7 @@ function Navbar() {
           <button className="close-btn" onClick={closeMenu} aria-label="Close menu">×</button>
         </div>
         <ul className="mobile-nav-links">
-          {NAV_ITEMS.map((item, i) => (
+          {navItems.map((item, i) => (
             <li key={item.to} style={{ transitionDelay: `${i * 40}ms` }}>
               <NavLink to={item.to} end={item.end} className={linkClass} onClick={closeMenu}>
                 {item.label}
