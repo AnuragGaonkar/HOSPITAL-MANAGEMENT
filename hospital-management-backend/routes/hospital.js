@@ -81,6 +81,53 @@ router.get('/overview', async (req, res) => {
   }
 });
 
+// ---------- Hospital profile ----------
+router.get('/profile', async (req, res) => {
+  try {
+    const hospital = await Hospital.findById(req.auth.id)
+      .select('hospitalName loginId state city address pincode bedsTotal bedsAvailable departments');
+    if (!hospital) {
+      return res.status(404).json({ message: 'Hospital not found.' });
+    }
+    res.json(hospital);
+  } catch (error) {
+    console.error('Error fetching hospital profile:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+router.put('/profile', async (req, res) => {
+  try {
+    const { hospitalName, state, city, address, pincode, bedsTotal, bedsAvailable, departments } = req.body;
+
+    if (bedsTotal !== undefined && bedsAvailable !== undefined && Number(bedsAvailable) > Number(bedsTotal)) {
+      return res.status(400).json({ message: 'Beds available cannot exceed total beds.' });
+    }
+
+    const hospital = await Hospital.findByIdAndUpdate(
+      req.auth.id,
+      {
+        $set: {
+          ...(hospitalName !== undefined && { hospitalName }),
+          ...(state !== undefined && { state }),
+          ...(city !== undefined && { city }),
+          ...(address !== undefined && { address }),
+          ...(pincode !== undefined && { pincode }),
+          ...(bedsTotal !== undefined && { bedsTotal: Number(bedsTotal) }),
+          ...(bedsAvailable !== undefined && { bedsAvailable: Number(bedsAvailable) }),
+          ...(departments !== undefined && { departments }),
+        },
+      },
+      { new: true, runValidators: true }
+    ).select('hospitalName loginId state city address pincode bedsTotal bedsAvailable departments');
+
+    res.json(hospital);
+  } catch (error) {
+    console.error('Error updating hospital profile:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
 // ---------- Doctors ----------
 // Optional ?department=Cardiology to filter the list.
 // Each doctor includes real assigned-patient data (name + count) pulled
@@ -196,6 +243,23 @@ router.post('/inventory', async (req, res) => {
     res.status(201).json(item);
   } catch (error) {
     console.error('Error creating inventory item:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+router.put('/inventory/:id', async (req, res) => {
+  try {
+    const item = await InventoryItem.findOneAndUpdate(
+      { _id: req.params.id, hospital: req.auth.id },
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found.' });
+    }
+    res.json(item);
+  } catch (error) {
+    console.error('Error updating inventory item:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });

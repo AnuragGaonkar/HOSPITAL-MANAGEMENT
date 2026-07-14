@@ -10,6 +10,7 @@ import LoginHospital from './Login/LoginHospital';
 import HospitalRegistration from './Login/HospitalRegistration';
 import Dashboard from './Hospital/Dashboard';
 import InventoryForm from './Hospital/InventoryForm';
+import HospitalProfile from './Hospital/Hospitalprofile';
 import BookAppointment from './Booking/BookAppointment';
 import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
@@ -33,6 +34,10 @@ function App() {
             <Route
               path="/hospital/inventory/new"
               element={<ProtectedRoute role="hospital"><InventoryForm /></ProtectedRoute>}
+            />
+            <Route
+              path="/hospital/profile"
+              element={<ProtectedRoute role="hospital"><HospitalProfile /></ProtectedRoute>}
             />
             <Route
               path="/book-appointment"

@@ -40,9 +40,16 @@ const InventoryForm = () => {
         quantity: Number(quantity),
         reorderLevel: Number(reorderLevel),
         unitPrice: Number(unitPrice),
-        batchDetails: [
-          { batchNumber, manufactureDate, expiryDate }
-        ]
+        // Omit batch details entirely if nothing was entered (common for
+        // Equipment/Consumable items) — sending empty date strings would
+        // fail Mongoose's Date cast on the backend.
+        batchDetails: (batchNumber || manufactureDate || expiryDate)
+          ? [{
+              batchNumber: batchNumber || undefined,
+              manufactureDate: manufactureDate || undefined,
+              expiryDate: expiryDate || undefined,
+            }]
+          : [],
       },
       supplierInformation: {
         supplierName,
@@ -172,38 +179,53 @@ const InventoryForm = () => {
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="batchNumber">Batch Number<span className="required">*</span></label>
-              <input
-                type="text"
-                id="batchNumber"
-                value={batchNumber}
-                onChange={(e) => setBatchNumber(e.target.value)}
-                required
-              />
-            </div>
+            {itemCategory === 'Medicine' ? (
+              <>
+                <div className="form-group">
+                  <label htmlFor="batchNumber">Batch Number<span className="required">*</span></label>
+                  <input
+                    type="text"
+                    id="batchNumber"
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    required
+                  />
+                </div>
 
-            <div className="form-group">
-              <label htmlFor="manufactureDate">Manufacture Date<span className="required">*</span></label>
-              <input
-                type="date"
-                id="manufactureDate"
-                value={manufactureDate}
-                onChange={(e) => setManufactureDate(e.target.value)}
-                required
-              />
-            </div>
+                <div className="form-group">
+                  <label htmlFor="manufactureDate">Manufacture Date<span className="required">*</span></label>
+                  <input
+                    type="date"
+                    id="manufactureDate"
+                    value={manufactureDate}
+                    onChange={(e) => setManufactureDate(e.target.value)}
+                    required
+                  />
+                </div>
 
-            <div className="form-group">
-              <label htmlFor="expiryDate">Expiry Date<span className="required">*</span></label>
-              <input
-                type="date"
-                id="expiryDate"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                required
-              />
-            </div>
+                <div className="form-group">
+                  <label htmlFor="expiryDate">Expiry Date<span className="required">*</span></label>
+                  <input
+                    type="date"
+                    id="expiryDate"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="form-group">
+                <label htmlFor="batchNumber">Batch / Serial Number <span className="optional-hint">(optional)</span></label>
+                <input
+                  type="text"
+                  id="batchNumber"
+                  value={batchNumber}
+                  onChange={(e) => setBatchNumber(e.target.value)}
+                  placeholder="e.g. asset tag or serial number"
+                />
+              </div>
+            )}
           </fieldset>
 
           {/* Supplier Information */}

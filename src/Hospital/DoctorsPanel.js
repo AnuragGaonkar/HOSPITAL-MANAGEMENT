@@ -17,6 +17,67 @@ function AvailabilityBadge({ status }) {
   );
 }
 
+function AddDoctorForm({ onSave, onCancel, saving, defaultDepartment }) {
+  const [form, setForm] = useState({
+    name: '',
+    specialization: defaultDepartment || '',
+    experienceYears: 1,
+    availability: 'available',
+    contact: '',
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <form
+      className="doctor-edit-form doctor-add-form"
+      onSubmit={(e) => { e.preventDefault(); onSave(form); }}
+    >
+      <label>
+        Name
+        <input name="name" value={form.name} onChange={handleChange} placeholder="Dr. Full Name" required />
+      </label>
+      <label>
+        Specialization
+        <input name="specialization" value={form.specialization} onChange={handleChange} required />
+      </label>
+      <div className="doctor-edit-row">
+        <label>
+          Experience (yrs)
+          <input
+            type="number"
+            name="experienceYears"
+            value={form.experienceYears}
+            onChange={handleChange}
+            min="0"
+          />
+        </label>
+        <label>
+          Availability
+          <select name="availability" value={form.availability} onChange={handleChange}>
+            <option value="available">Available</option>
+            <option value="on-leave">On Leave</option>
+            <option value="in-surgery">In Surgery</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        Contact
+        <input name="contact" value={form.contact} onChange={handleChange} placeholder="+91 ..." />
+      </label>
+      <div className="doctor-edit-actions">
+        <button type="button" className="doctor-edit-cancel" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="doctor-edit-save" disabled={saving}>
+          {saving ? 'Adding…' : 'Add Doctor'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function EditDoctorForm({ doctor, onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     name: doctor.name,
@@ -87,6 +148,9 @@ export default function DoctorsPanel({ open, department, onClose }) {
   const [editingId, setEditingId] = useState(null);
   const [savingId, setSavingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [addingOpen, setAddingOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   const loadDoctors = () => {
     setLoading(true);
@@ -99,7 +163,10 @@ export default function DoctorsPanel({ open, department, onClose }) {
   };
 
   useEffect(() => {
-    if (open) loadDoctors();
+    if (open) {
+      loadDoctors();
+      setAddingOpen(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, department]);
 
@@ -127,6 +194,34 @@ export default function DoctorsPanel({ open, department, onClose }) {
     }
   };
 
+  const handleAdd = async (form) => {
+    setAdding(true);
+    try {
+      const res = await api.post('/hospital/doctors', {
+        ...form,
+        experienceYears: Number(form.experienceYears) || 0,
+      });
+      setDoctors((prev) => [...prev, { ...res.data, assignedPatients: [] }]);
+      setAddingOpen(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not add doctor.');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async (doctorId) => {
+    setDeletingId(doctorId);
+    try {
+      await api.delete(`/hospital/doctors/${doctorId}`);
+      setDoctors((prev) => prev.filter((d) => d._id !== doctorId));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not remove this doctor.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <>
       <div className={`doctors-overlay ${open ? 'open' : ''}`} onClick={onClose} />
@@ -139,10 +234,31 @@ export default function DoctorsPanel({ open, department, onClose }) {
           <button type="button" className="doctors-close-btn" onClick={onClose} aria-label="Close">×</button>
         </div>
 
+        <div className="doctors-panel-toolbar">
+          <button
+            type="button"
+            className="doctors-add-trigger"
+            onClick={() => setAddingOpen((prev) => !prev)}
+          >
+            {addingOpen ? '× Cancel' : '+ Add Doctor'}
+          </button>
+        </div>
+
         <div className="doctors-panel-body">
+          {addingOpen && (
+            <div className="doctor-card doctor-add-card">
+              <AddDoctorForm
+                defaultDepartment={department}
+                saving={adding}
+                onCancel={() => setAddingOpen(false)}
+                onSave={handleAdd}
+              />
+            </div>
+          )}
+
           {loading && <p className="doctors-status">Loading doctors…</p>}
           {error && <p className="doctors-status error">{error}</p>}
-          {!loading && !error && doctors.length === 0 && (
+          {!loading && !error && doctors.length === 0 && !addingOpen && (
             <p className="doctors-status">No doctors on record yet.</p>
           )}
 
@@ -174,14 +290,25 @@ export default function DoctorsPanel({ open, department, onClose }) {
                         <span className="doctor-specialization">{doc.specialization}</span>
                         <span className="doctor-meta">{doc.experienceYears} yrs experience · {doc.contact}</span>
                       </div>
-                      <button
-                        type="button"
-                        className="doctor-edit-trigger"
-                        onClick={() => setEditingId(doc._id)}
-                        aria-label={`Edit ${doc.name}`}
-                      >
-                        Edit
-                      </button>
+                      <div className="doctor-card-actions">
+                        <button
+                          type="button"
+                          className="doctor-edit-trigger"
+                          onClick={() => setEditingId(doc._id)}
+                          aria-label={`Edit ${doc.name}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="doctor-delete-trigger"
+                          onClick={() => handleDelete(doc._id)}
+                          disabled={deletingId === doc._id}
+                          aria-label={`Remove ${doc.name}`}
+                        >
+                          {deletingId === doc._id ? '…' : 'Remove'}
+                        </button>
+                      </div>
                     </div>
 
                     <button

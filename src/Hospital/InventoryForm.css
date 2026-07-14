@@ -54,6 +54,12 @@
   color: #d92b2b;
 }
 
+.optional-hint {
+  color: var(--color-muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+
 .form-group input,
 .form-group textarea,
 .form-group select {
