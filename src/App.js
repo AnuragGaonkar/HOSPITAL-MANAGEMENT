@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Home from './Home/Home';
 import About from './About/About';
 import LoginPatient from './Login/LoginPatient';
@@ -10,10 +10,24 @@ import LoginHospital from './Login/LoginHospital';
 import HospitalRegistration from './Login/HospitalRegistration';
 import Dashboard from './Hospital/Dashboard';
 import InventoryForm from './Hospital/InventoryForm';
-import HospitalProfile from './Hospital/Hospitalprofile';
+import HospitalProfile from './Hospital/HospitalProfile';
 import BookAppointment from './Booking/BookAppointment';
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
+
+// The Home page (with its patient-facing "how to book" walkthrough) should
+// only greet logged-out visitors. Once someone's logged in, "/" should
+// bounce them straight to whatever their own home base is.
+function HomeGate() {
+  const { isAuthenticated, user } = useAuth();
+  if (isAuthenticated && user.role === 'hospital') {
+    return <Navigate to="/hospital/dashboard" replace />;
+  }
+  if (isAuthenticated && user.role === 'patient') {
+    return <Navigate to="/user" replace />;
+  }
+  return <Home />;
+}
 
 function App() {
   return (
@@ -21,7 +35,7 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<HomeGate />} />
             <Route path="/about" element={<About />} />
             <Route path="/login/patient" element={<LoginPatient />} />
             <Route path="/register/patient" element={<PatientRegistration />} /> 

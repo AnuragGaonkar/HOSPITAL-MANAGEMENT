@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Navbar from '../Navbar/Navbar';
 import api from '../api/client';
-import './Hospitalprofile.css';
+import './HospitalProfile.css';
 
 export default function HospitalProfile() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [form, setForm] = useState(null);
@@ -46,11 +45,6 @@ export default function HospitalProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (Number(form.bedsAvailable) > Number(form.bedsTotal)) {
-      setError('Beds available cannot exceed total beds.');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -118,13 +112,7 @@ export default function HospitalProfile() {
                 </label>
                 <label>
                   Beds Available
-                  <input
-                    type="number"
-                    name="bedsAvailable"
-                    min="0"
-                    value={form.bedsAvailable}
-                    onChange={handleChange}
-                  />
+                  <input value={`${form.bedsAvailable} (computed automatically)`} disabled />
                 </label>
               </div>
 

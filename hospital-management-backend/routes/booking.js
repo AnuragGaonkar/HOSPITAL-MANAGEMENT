@@ -4,16 +4,28 @@ const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { computeBedsAvailable } = require('../utils/beds');
 
 const router = express.Router();
 
 // ---------- List hospitals for the booking dropdown ----------
-// Any logged-in patient can browse hospitals — not hospital-role gated.
 router.get('/hospitals', requireAuth, requireRole('patient'), async (req, res) => {
   try {
     const hospitals = await Hospital.find()
-      .select('hospitalName city address departments bedsAvailable');
-    res.json(hospitals);
+      .select('hospitalName city address departments bedsTotal');
+
+    const withBeds = await Promise.all(
+      hospitals.map(async (h) => ({
+        _id: h._id,
+        hospitalName: h.hospitalName,
+        city: h.city,
+        address: h.address,
+        departments: h.departments,
+        bedsAvailable: await computeBedsAvailable(h),
+      }))
+    );
+
+    res.json(withBeds);
   } catch (error) {
     console.error('Error listing hospitals:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
@@ -21,9 +33,6 @@ router.get('/hospitals', requireAuth, requireRole('patient'), async (req, res) =
 });
 
 // ---------- Book an appointment ----------
-// Assigns the least-loaded available doctor in the chosen department at
-// the chosen hospital. If requiresBed is true, holds one bed on the
-// hospital for the duration of the appointment (released on cancel).
 router.post('/appointments', requireAuth, requireRole('patient'), async (req, res) => {
   try {
     const { hospitalId, department, date, time, requiresBed } = req.body;
@@ -42,9 +51,6 @@ router.post('/appointments', requireAuth, requireRole('patient'), async (req, re
       return res.status(404).json({ message: 'Patient not found.' });
     }
 
-    // Find doctors in this department at this hospital who aren't on leave,
-    // then pick whichever currently has the fewest active appointments —
-    // this is the "traffic divergence" load-balancing across doctors.
     const candidateDoctors = await Doctor.find({
       hospital: hospitalId,
       specialization: department,
@@ -68,11 +74,10 @@ router.post('/appointments', requireAuth, requireRole('patient'), async (req, re
     }, candidateDoctors[0]);
 
     if (requiresBed) {
-      if (hospital.bedsAvailable <= 0) {
+      const bedsAvailable = await computeBedsAvailable(hospital);
+      if (bedsAvailable <= 0) {
         return res.status(400).json({ message: 'No beds currently available at this hospital.' });
       }
-      hospital.bedsAvailable -= 1;
-      await hospital.save();
     }
 
     const appointment = await Appointment.create({
@@ -114,27 +119,19 @@ router.get('/appointments/mine', requireAuth, requireRole('patient'), async (req
   }
 });
 
-// ---------- Cancel an appointment (releases the held bed, if any) ----------
+// ---------- Cancel an appointment ----------
+// No bed bookkeeping needed here anymore — bedsAvailable is computed
+// live, so cancelling just changes status and the count updates itself.
 router.put('/appointments/:id/cancel', requireAuth, requireRole('patient'), async (req, res) => {
   try {
     const appointment = await Appointment.findOne({ _id: req.params.id, patient: req.auth.id });
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found.' });
     }
-    if (appointment.status === 'cancelled') {
-      return res.json(appointment);
+    if (appointment.status !== 'cancelled') {
+      appointment.status = 'cancelled';
+      await appointment.save();
     }
-
-    if (appointment.requiresBed) {
-      const hospital = await Hospital.findById(appointment.hospital);
-      if (hospital) {
-        hospital.bedsAvailable = Math.min(hospital.bedsAvailable + 1, hospital.bedsTotal);
-        await hospital.save();
-      }
-    }
-
-    appointment.status = 'cancelled';
-    await appointment.save();
     res.json(appointment);
   } catch (error) {
     console.error('Error cancelling appointment:', error);

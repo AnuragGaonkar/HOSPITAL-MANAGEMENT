@@ -76,18 +76,37 @@
 .doctors-panel-toolbar {
   padding: 12px 22px;
   border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: 8px;
+}
+
+.doctors-search {
+  flex: 1;
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 13px;
+}
+
+.doctors-search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, 0.15);
 }
 
 .doctors-add-trigger {
-  width: 100%;
   background: var(--color-primary);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 10px 0;
+  padding: 0 16px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   transition: background-color var(--dur-fast) var(--ease-smooth);
 }
 

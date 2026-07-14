@@ -183,15 +183,11 @@
   position: absolute;
   top: 5px;
   left: 5px;
-  width: calc(50% - 5px);
+  width: calc((100% - 10px) / var(--tab-count, 2));
   height: calc(100% - 10px);
   background: var(--color-primary);
   border-radius: 9px;
   transition: transform var(--dur-med) var(--ease-smooth);
-}
-
-.dashboard-tabs-indicator.right {
-  transform: translateX(100%);
 }
 
 .stats-grid {
@@ -521,8 +517,52 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   font-size: 14px;
   color: var(--color-muted);
+}
+
+.inventory-search {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.inventory-search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, 0.15);
+}
+
+.appt-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.appt-status-scheduled {
+  background: rgba(14, 124, 134, 0.12);
+  color: var(--color-primary);
+}
+
+.appt-status-completed {
+  background: rgba(20, 163, 100, 0.12);
+  color: #14a364;
+}
+
+.appt-status-cancelled {
+  background: rgba(217, 43, 43, 0.1);
+  color: #d92b2b;
 }
 
 .btn-primary-link {

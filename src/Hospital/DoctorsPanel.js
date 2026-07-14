@@ -151,6 +151,7 @@ export default function DoctorsPanel({ open, department, onClose }) {
   const [deletingId, setDeletingId] = useState(null);
   const [addingOpen, setAddingOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [search, setSearch] = useState('');
 
   const loadDoctors = () => {
     setLoading(true);
@@ -166,6 +167,7 @@ export default function DoctorsPanel({ open, department, onClose }) {
     if (open) {
       loadDoctors();
       setAddingOpen(false);
+      setSearch('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, department]);
@@ -222,6 +224,12 @@ export default function DoctorsPanel({ open, department, onClose }) {
     }
   };
 
+  const filteredDoctors = doctors.filter((doc) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return doc.name.toLowerCase().includes(q) || doc.specialization.toLowerCase().includes(q);
+  });
+
   return (
     <>
       <div className={`doctors-overlay ${open ? 'open' : ''}`} onClick={onClose} />
@@ -235,6 +243,13 @@ export default function DoctorsPanel({ open, department, onClose }) {
         </div>
 
         <div className="doctors-panel-toolbar">
+          <input
+            type="text"
+            className="doctors-search"
+            placeholder="Search by name or specialization…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <button
             type="button"
             className="doctors-add-trigger"
@@ -261,8 +276,11 @@ export default function DoctorsPanel({ open, department, onClose }) {
           {!loading && !error && doctors.length === 0 && !addingOpen && (
             <p className="doctors-status">No doctors on record yet.</p>
           )}
+          {!loading && !error && doctors.length > 0 && filteredDoctors.length === 0 && (
+            <p className="doctors-status">No doctors match "{search}".</p>
+          )}
 
-          {doctors.map((doc, i) => {
+          {filteredDoctors.map((doc, i) => {
             const isEditing = editingId === doc._id;
             const isExpanded = expandedId === doc._id;
             const patientCount = doc.assignedPatients?.length || 0;

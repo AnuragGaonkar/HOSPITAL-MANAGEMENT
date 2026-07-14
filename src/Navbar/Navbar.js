@@ -72,9 +72,6 @@ function Navbar() {
           <span className="dropbtn-caret">▾</span>
         </button>
         <div className="dropdown-content">
-          <NavLink to={user.role === 'hospital' ? '/hospital/dashboard' : '/user'} onClick={onNavigate}>
-            {user.role === 'hospital' ? 'Dashboard' : 'My Profile'}
-          </NavLink>
           <button type="button" className="dropdown-logout" onClick={handleLogout}>
             Log Out
           </button>

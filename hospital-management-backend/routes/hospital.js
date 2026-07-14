@@ -4,6 +4,7 @@ const InventoryItem = require('../models/InventoryItem');
 const Doctor = require('../models/Doctor');
 const Appointment = require('../models/Appointment');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { computeBedsAvailable } = require('../utils/beds');
 
 const router = express.Router();
 
@@ -63,7 +64,7 @@ router.get('/overview', async (req, res) => {
       city: hospital.city,
       address: hospital.address,
       bedsTotal: hospital.bedsTotal,
-      bedsAvailable: hospital.bedsAvailable,
+      bedsAvailable: await computeBedsAvailable(hospital),
       doctorsCount: realDoctorsCount > 0 ? realDoctorsCount : hospital.doctorsCount,
       departments: hospital.departments,
       departmentBreakdown,
@@ -85,11 +86,16 @@ router.get('/overview', async (req, res) => {
 router.get('/profile', async (req, res) => {
   try {
     const hospital = await Hospital.findById(req.auth.id)
-      .select('hospitalName loginId state city address pincode bedsTotal bedsAvailable departments');
+      .select('hospitalName loginId state city address pincode bedsTotal departments');
     if (!hospital) {
       return res.status(404).json({ message: 'Hospital not found.' });
     }
-    res.json(hospital);
+    res.json({
+      ...hospital.toObject(),
+      // Computed, read-only — see utils/beds.js. Not directly editable
+      // here since it's derived from active bed-holding appointments.
+      bedsAvailable: await computeBedsAvailable(hospital),
+    });
   } catch (error) {
     console.error('Error fetching hospital profile:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
@@ -98,11 +104,7 @@ router.get('/profile', async (req, res) => {
 
 router.put('/profile', async (req, res) => {
   try {
-    const { hospitalName, state, city, address, pincode, bedsTotal, bedsAvailable, departments } = req.body;
-
-    if (bedsTotal !== undefined && bedsAvailable !== undefined && Number(bedsAvailable) > Number(bedsTotal)) {
-      return res.status(400).json({ message: 'Beds available cannot exceed total beds.' });
-    }
+    const { hospitalName, state, city, address, pincode, bedsTotal, departments } = req.body;
 
     const hospital = await Hospital.findByIdAndUpdate(
       req.auth.id,
@@ -114,16 +116,57 @@ router.put('/profile', async (req, res) => {
           ...(address !== undefined && { address }),
           ...(pincode !== undefined && { pincode }),
           ...(bedsTotal !== undefined && { bedsTotal: Number(bedsTotal) }),
-          ...(bedsAvailable !== undefined && { bedsAvailable: Number(bedsAvailable) }),
           ...(departments !== undefined && { departments }),
         },
       },
       { new: true, runValidators: true }
-    ).select('hospitalName loginId state city address pincode bedsTotal bedsAvailable departments');
+    ).select('hospitalName loginId state city address pincode bedsTotal departments');
 
-    res.json(hospital);
+    res.json({
+      ...hospital.toObject(),
+      bedsAvailable: await computeBedsAvailable(hospital),
+    });
   } catch (error) {
     console.error('Error updating hospital profile:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// ---------- Appointments (hospital view) ----------
+// Optional ?status=scheduled|completed|cancelled to filter
+router.get('/appointments', async (req, res) => {
+  try {
+    const filter = { hospital: req.auth.id };
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    const appointments = await Appointment.find(filter)
+      .populate('doctor', 'name specialization')
+      .sort({ date: 1, time: 1 });
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+router.put('/appointments/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['scheduled', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status.' });
+    }
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.id, hospital: req.auth.id },
+      { status },
+      { new: true }
+    ).populate('doctor', 'name specialization');
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found.' });
+    }
+    res.json(appointment);
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
