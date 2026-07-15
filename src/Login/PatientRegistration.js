@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './PatientRegistration.css';
 import Navbar from '../Navbar/Navbar';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/client';
 
 function PatientRegistration() {
   const [formData, setFormData] = useState({
@@ -44,6 +44,8 @@ function PatientRegistration() {
   });
 
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState('');
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -137,7 +139,7 @@ function PatientRegistration() {
   
     // Append form fields
     for (const key in formData) {
-      if (key !== 'profilePhoto') {
+      if (key !== 'profilePhoto' && key !== 'confirmPassword') {
         formDataWithFile.append(key, formData[key]);
       }
     }
@@ -146,28 +148,20 @@ function PatientRegistration() {
     if (formData.profilePhoto) {
       formDataWithFile.append('profilePhoto', formData.profilePhoto);
     }
-  
-    // Log form data and file
-    console.log('Form data being sent:', formDataWithFile);
-  
+
+    setServerError('');
+    setSubmitting(true);
     try {
-      const response = await axios.post(
-        'http://localhost:5000/register/patient',
-        formDataWithFile,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      console.log(response);
-      alert('Registration successful! You can now log in.');
+      // NOTE: don't manually set a Content-Type header here — when a
+      // Content-Type is set explicitly it's sent without the multipart
+      // boundary parameter, which the backend (multer) needs to parse
+      // the body. Letting axios detect the FormData sets it correctly.
+      await api.post('/register/patient', formDataWithFile);
       navigate('/login/patient');
     } catch (error) {
-      console.error('Error submitting form data:', error);
-      const errorMessage =
-        error.response?.data?.message || 'Registration failed.';
-      alert(errorMessage);
+      setServerError(error.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -479,7 +473,10 @@ function PatientRegistration() {
             </section>
 
             {/* Submit Button */}
-            <button type="submit">Submit Registration</button>
+            {serverError && <p className="registration-error">{serverError}</p>}
+            <button type="submit" disabled={submitting}>
+              {submitting ? 'Submitting…' : 'Submit Registration'}
+            </button>
           </form>
         </div>
       </div>
