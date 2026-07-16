@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Dashboard from '../Institute/Dashboard';
+import Dashboard from '../Dashboard/Dashboard';
 import './InventoryForm.css';
 
 const InventoryForm = () => {
