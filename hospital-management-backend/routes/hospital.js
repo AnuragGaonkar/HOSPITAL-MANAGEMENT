@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
 const Hospital = require('../models/Hospital');
 const InventoryItem = require('../models/InventoryItem');
 const Doctor = require('../models/Doctor');
@@ -10,6 +12,22 @@ const router = express.Router();
 
 // All routes here require a valid hospital login
 router.use(requireAuth, requireRole('hospital'));
+
+// Photo uploads (hospital's own photo, or a doctor's photo) land in
+// uploads/photos/. Served back out via the existing static /uploads
+// route in server.js, so a saved path like "uploads/photos/xyz.jpg"
+// is reachable at {API_BASE_URL}/uploads/photos/xyz.jpg.
+const photoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/photos/');
+  },
+  filename: function (req, file, cb) {
+    const prefix = req.params.id || req.auth.id;
+    const ext = path.extname(file.originalname);
+    cb(null, `${prefix}-${Date.now()}${ext}`);
+  },
+});
+const uploadPhoto = multer({ storage: photoStorage });
 
 function startOfToday() {
   const d = new Date();
@@ -128,6 +146,23 @@ router.put('/profile', async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating hospital profile:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+router.put('/profile/photo', uploadPhoto.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No photo was uploaded.' });
+    }
+    const hospital = await Hospital.findByIdAndUpdate(
+      req.auth.id,
+      { $set: { photoUrl: req.file.path.replace(/\\/g, '/') } },
+      { new: true }
+    ).select('photoUrl');
+    res.json(hospital);
+  } catch (error) {
+    console.error('Error uploading hospital photo:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
@@ -264,6 +299,26 @@ router.delete('/doctors/:id', async (req, res) => {
     res.json({ message: 'Doctor removed.' });
   } catch (error) {
     console.error('Error deleting doctor:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+router.put('/doctors/:id/photo', uploadPhoto.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No photo was uploaded.' });
+    }
+    const doctor = await Doctor.findOneAndUpdate(
+      { _id: req.params.id, hospital: req.auth.id },
+      { $set: { photoUrl: req.file.path.replace(/\\/g, '/') } },
+      { new: true }
+    );
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found.' });
+    }
+    res.json(doctor);
+  } catch (error) {
+    console.error('Error uploading doctor photo:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });

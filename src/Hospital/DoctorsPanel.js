@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../api/client';
+import api, { API_BASE_URL } from '../api/client';
 import './DoctorsPanel.css';
 
 const AVAILABILITY_LABEL = {
@@ -78,7 +78,7 @@ function AddDoctorForm({ onSave, onCancel, saving, defaultDepartment }) {
   );
 }
 
-function EditDoctorForm({ doctor, onSave, onCancel, saving }) {
+function EditDoctorForm({ doctor, onSave, onCancel, saving, onPhotoUploaded }) {
   const [form, setForm] = useState({
     name: doctor.name,
     specialization: doctor.specialization,
@@ -86,10 +86,30 @@ function EditDoctorForm({ doctor, onSave, onCancel, saving }) {
     availability: doctor.availability,
     contact: doctor.contact || '',
   });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError('');
+    setUploadingPhoto(true);
+    const photoData = new FormData();
+    photoData.append('photo', file);
+    try {
+      const res = await api.put(`/hospital/doctors/${doctor._id}/photo`, photoData);
+      onPhotoUploaded(doctor._id, res.data.photoUrl);
+    } catch (err) {
+      setPhotoError(err.response?.data?.message || 'Could not upload photo.');
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -97,6 +117,21 @@ function EditDoctorForm({ doctor, onSave, onCancel, saving }) {
       className="doctor-edit-form"
       onSubmit={(e) => { e.preventDefault(); onSave(form); }}
     >
+      <div className="doctor-photo-row">
+        <div className="doctor-avatar" aria-hidden="true">
+          {doctor.photoUrl ? (
+            <img src={`${API_BASE_URL}/${doctor.photoUrl}`} alt="" />
+          ) : (
+            doctor.name.replace('Dr. ', '').charAt(0)
+          )}
+        </div>
+        <label className="doctor-photo-upload-btn">
+          {uploadingPhoto ? 'Uploading…' : 'Change Photo'}
+          <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} hidden />
+        </label>
+        {photoError && <span className="doctors-status error">{photoError}</span>}
+      </div>
+
       <label>
         Name
         <input name="name" value={form.name} onChange={handleChange} required />
@@ -293,12 +328,19 @@ export default function DoctorsPanel({ open, department, onClose }) {
                     saving={savingId === doc._id}
                     onCancel={() => setEditingId(null)}
                     onSave={(form) => handleSave(doc._id, form)}
+                    onPhotoUploaded={(id, photoUrl) => {
+                      setDoctors((prev) => prev.map((d) => (d._id === id ? { ...d, photoUrl } : d)));
+                    }}
                   />
                 ) : (
                   <>
                     <div className="doctor-card-main">
                       <div className="doctor-avatar" aria-hidden="true">
-                        {doc.name.replace('Dr. ', '').charAt(0)}
+                        {doc.photoUrl ? (
+                          <img src={`${API_BASE_URL}/${doc.photoUrl}`} alt="" />
+                        ) : (
+                          doc.name.replace('Dr. ', '').charAt(0)
+                        )}
                       </div>
                       <div className="doctor-info">
                         <div className="doctor-name-row">

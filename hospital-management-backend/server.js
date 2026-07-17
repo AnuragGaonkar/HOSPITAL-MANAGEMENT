@@ -9,11 +9,17 @@ const bookingRoutes = require('./routes/booking');
 const patientRoutes = require('./routes/patient');
 const cors = require('cors');
 const path = require('path'); // Ensure path module is imported
+const fs = require('fs');
 
 const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+// Multer's diskStorage doesn't create destination folders on its own —
+// make sure this exists before any upload hits it, or the first
+// request would crash with ENOENT.
+fs.mkdirSync(path.join(__dirname, 'uploads', 'photos'), { recursive: true });
 
 // Middleware
 app.use(cors());

@@ -5,6 +5,7 @@ import About from './About/About';
 import LoginPatient from './Login/LoginPatient';
 import PatientRegistration from './Login/PatientRegistration'; 
 import User from './User/User';
+import PatientProfile from './User/PatientProfile';
 import './App.css';
 import LoginHospital from './Login/LoginHospital';
 import HospitalRegistration from './Login/HospitalRegistration';
@@ -58,6 +59,7 @@ function App() {
               element={<ProtectedRoute role="patient"><BookAppointment /></ProtectedRoute>}
             />
             <Route path="/user" element={<ProtectedRoute role="patient"><User /></ProtectedRoute>} /> 
+            <Route path="/patient/profile" element={<ProtectedRoute role="patient"><PatientProfile /></ProtectedRoute>} />
           </Routes>
           <footer className="footer">
             <p>© 2024 Hospital Management System. All rights reserved.</p>

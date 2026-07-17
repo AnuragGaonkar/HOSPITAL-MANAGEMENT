@@ -16,6 +16,7 @@ const DoctorSchema = new mongoose.Schema({
     default: 'available',
   },
   contact: String,
+  photoUrl: String,
 }, {
   timestamps: true,
 });

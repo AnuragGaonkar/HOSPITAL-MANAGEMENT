@@ -1,0 +1,140 @@
+.patient-profile-page {
+  min-height: calc(100vh - 64px - 52px);
+  background: var(--color-bg);
+  display: flex;
+  justify-content: center;
+  padding: 96px 20px 60px;
+  box-sizing: border-box;
+}
+
+.patient-profile-card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 32px 36px 40px;
+  color: var(--color-ink);
+  box-sizing: border-box;
+}
+
+.patient-profile-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.patient-profile-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.profile-back-link {
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.profile-back-link:hover {
+  text-decoration: underline;
+}
+
+.patient-profile-status {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.patient-profile-status.error {
+  color: #d92b2b;
+}
+
+.patient-profile-status.success {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.patient-profile-card form section {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.patient-profile-card form section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+}
+
+.patient-profile-card h3 {
+  margin: 0 0 18px;
+  font-size: 15px;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.patient-profile-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-bottom: 16px;
+}
+
+.patient-profile-card input,
+.patient-profile-card textarea {
+  font: inherit;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  transition: border-color var(--dur-fast) var(--ease-smooth), box-shadow var(--dur-fast) var(--ease-smooth);
+}
+
+.patient-profile-card input:focus,
+.patient-profile-card textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, 0.15);
+}
+
+.patient-profile-card textarea {
+  min-height: 64px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.patient-profile-card button[type="submit"] {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-smooth), transform var(--dur-fast) var(--ease-smooth);
+}
+
+.patient-profile-card button[type="submit"]:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.patient-profile-card button[type="submit"]:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .patient-profile-card {
+    padding: 24px 20px 32px;
+  }
+}

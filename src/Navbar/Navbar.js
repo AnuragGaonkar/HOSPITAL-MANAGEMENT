@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import logo from './logo.png';
 import useTheme from '../theme/useTheme';
 import EmergencyButton from '../Emergency/EmergencyButton';
@@ -22,6 +22,7 @@ function Navbar() {
     ? [...NAV_ITEMS, { to: '/book-appointment', label: 'Book Appointment', end: false }]
     : NAV_ITEMS;
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleMenu = () => setMenuOpen((open) => !open);
   const closeMenu = () => setMenuOpen(false);
@@ -40,6 +41,24 @@ function Navbar() {
   }, [menuOpen]);
 
   const linkClass = ({ isActive }) => (isActive ? 'selected' : '');
+
+  // "Home" redirects logged-in users to their own landing page (patients
+  // land on /user, hospitals on /hospital/dashboard — see HomeGate in
+  // App.js), so NavLink's own path-matching never marks it active once
+  // you're there. This treats those landing pages as "Home" too.
+  const isHomeActive = (item) => {
+    if (item.to !== '/') return undefined; // let NavLink handle every other item normally
+    if (location.pathname === '/') return true;
+    if (isAuthenticated && user.role === 'patient' && location.pathname === '/user') return true;
+    if (isAuthenticated && user.role === 'hospital' && location.pathname.startsWith('/hospital/dashboard')) return true;
+    return false;
+  };
+
+  const homeAwareClass = (item) => {
+    const forced = isHomeActive(item);
+    if (forced === undefined) return linkClass;
+    return forced ? 'selected' : '';
+  };
 
   const handleLogout = () => {
     logout();
@@ -72,6 +91,9 @@ function Navbar() {
           <span className="dropbtn-caret">▾</span>
         </button>
         <div className="dropdown-content">
+          {user.role === 'patient' && (
+            <NavLink to="/patient/profile" onClick={onNavigate}>My Profile</NavLink>
+          )}
           <button type="button" className="dropdown-logout" onClick={handleLogout}>
             Log Out
           </button>
@@ -102,7 +124,7 @@ function Navbar() {
           <ul className="nav-links">
             {navItems.map((item) => (
               <li key={item.to}>
-                <NavLink to={item.to} end={item.end} className={linkClass}>
+                <NavLink to={item.to} end={item.end} className={homeAwareClass(item)}>
                   {item.label}
                 </NavLink>
               </li>
@@ -132,7 +154,7 @@ function Navbar() {
         <ul className="mobile-nav-links">
           {navItems.map((item, i) => (
             <li key={item.to} style={{ transitionDelay: `${i * 40}ms` }}>
-              <NavLink to={item.to} end={item.end} className={linkClass} onClick={closeMenu}>
+              <NavLink to={item.to} end={item.end} className={homeAwareClass(item)} onClick={closeMenu}>
                 {item.label}
               </NavLink>
             </li>

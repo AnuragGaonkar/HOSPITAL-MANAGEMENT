@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../Navbar/Navbar';
-import api from '../api/client';
+import api, { API_BASE_URL } from '../api/client';
 import './HospitalProfile.css';
 
 export default function HospitalProfile() {
@@ -12,6 +12,8 @@ export default function HospitalProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   useEffect(() => {
     api.get('/hospital/profile')
@@ -40,6 +42,29 @@ export default function HospitalProfile() {
   const removeDepartment = (dept) => {
     setForm((prev) => ({ ...prev, departments: prev.departments.filter((d) => d !== dept) }));
     setSaved(false);
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError('');
+    setUploadingPhoto(true);
+    const photoData = new FormData();
+    photoData.append('photo', file);
+
+    try {
+      // Don't set Content-Type manually — see PatientRegistration.js for
+      // why: axios needs to auto-set it so the multipart boundary is
+      // included, which the backend (multer) needs to parse the file.
+      const res = await api.put('/hospital/profile/photo', photoData);
+      setForm((prev) => ({ ...prev, photoUrl: res.data.photoUrl }));
+    } catch (err) {
+      setPhotoError(err.response?.data?.message || 'Could not upload photo.');
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -73,6 +98,23 @@ export default function HospitalProfile() {
 
           {form && !loading && (
             <form onSubmit={handleSubmit} className="profile-form">
+              <div className="profile-photo-section">
+                <div className="profile-photo-preview">
+                  {form.photoUrl ? (
+                    <img src={`${API_BASE_URL}/${form.photoUrl}`} alt={form.hospitalName} />
+                  ) : (
+                    <span>{(form.hospitalName || 'H').charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="profile-photo-controls">
+                  <label className="profile-photo-upload-btn">
+                    {uploadingPhoto ? 'Uploading…' : form.photoUrl ? 'Change Photo' : 'Upload Photo'}
+                    <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} hidden />
+                  </label>
+                  {photoError && <span className="profile-status error">{photoError}</span>}
+                </div>
+              </div>
+
               <label>
                 Hospital Name
                 <input name="hospitalName" value={form.hospitalName || ''} onChange={handleChange} required />

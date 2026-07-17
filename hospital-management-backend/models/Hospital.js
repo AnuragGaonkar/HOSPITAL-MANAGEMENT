@@ -23,6 +23,7 @@ const HospitalSchema = new mongoose.Schema({
   bedsAvailable: { type: Number, default: 0 },
   doctorsCount: { type: Number, default: 0 },
   departments: { type: [String], default: [] },
+  photoUrl: String,
 
   // Approximate coordinates — used for the "nearest hospital" map
   // feature. Real hospitals should have this geocoded properly;
