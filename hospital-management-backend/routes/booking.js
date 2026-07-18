@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/hospitals', requireAuth, requireRole('patient'), async (req, res) => {
   try {
     const hospitals = await Hospital.find()
-      .select('hospitalName city address departments bedsTotal');
+      .select('hospitalName city address departments bedsTotal location photoUrl');
 
     const withBeds = await Promise.all(
       hospitals.map(async (h) => ({
@@ -21,13 +21,29 @@ router.get('/hospitals', requireAuth, requireRole('patient'), async (req, res) =
         city: h.city,
         address: h.address,
         departments: h.departments,
+        location: h.location,
+        photoUrl: h.photoUrl,
         bedsAvailable: await computeBedsAvailable(h),
+        bedsTotal: h.bedsTotal,
       }))
     );
 
     res.json(withBeds);
   } catch (error) {
     console.error('Error listing hospitals:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// ---------- Preview a hospital's doctors (before booking) ----------
+router.get('/hospitals/:id/doctors', requireAuth, requireRole('patient'), async (req, res) => {
+  try {
+    const doctors = await Doctor.find({ hospital: req.params.id })
+      .select('name specialization experienceYears availability photoUrl')
+      .sort({ name: 1 });
+    res.json(doctors);
+  } catch (error) {
+    console.error('Error fetching hospital doctors:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
