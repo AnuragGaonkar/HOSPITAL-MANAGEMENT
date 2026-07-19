@@ -120,6 +120,11 @@ export default function HospitalProfile() {
                 <input name="hospitalName" value={form.hospitalName || ''} onChange={handleChange} required />
               </label>
 
+              <label>
+                Contact Email <span className="optional-hint">(used for password reset)</span>
+                <input type="email" name="email" value={form.email || ''} onChange={handleChange} />
+              </label>
+
               <div className="profile-row">
                 <label>
                   City

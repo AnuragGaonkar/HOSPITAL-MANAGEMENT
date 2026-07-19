@@ -6,6 +6,8 @@ import LoginPatient from './Login/LoginPatient';
 import PatientRegistration from './Login/PatientRegistration'; 
 import User from './User/User';
 import PatientProfile from './User/PatientProfile';
+import ForgotPassword from './Login/ForgotPassword';
+import ResetPassword from './Login/ResetPassword';
 import './App.css';
 import LoginHospital from './Login/LoginHospital';
 import HospitalRegistration from './Login/HospitalRegistration';
@@ -42,6 +44,8 @@ function App() {
             <Route path="/register/patient" element={<PatientRegistration />} /> 
             <Route path="/login/hospital" element={<LoginHospital />} /> 
             <Route path="/register/hospital" element={<HospitalRegistration />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/hospital/dashboard"
               element={<ProtectedRoute role="hospital"><Dashboard /></ProtectedRoute>}

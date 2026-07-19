@@ -72,6 +72,10 @@ function LoginHospital() {
             <button type="submit" className="auth-submit" disabled={submitting}>
               {submitting ? <span className="auth-spinner" aria-hidden="true" /> : 'Login'}
             </button>
+
+            <Link to="/forgot-password?role=hospital" className="auth-forgot-link">
+              Forgot password?
+            </Link>
           </form>
 
           <p className="auth-footnote">

@@ -42,6 +42,9 @@
   text-decoration: none;
   color: var(--color-muted);
   cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
   transition: background-color var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth);
 }
 
@@ -150,6 +153,20 @@
   text-align: center;
   font-size: 13px;
   color: var(--color-muted);
+}
+
+.auth-forgot-link {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.auth-forgot-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 .auth-footnote a {

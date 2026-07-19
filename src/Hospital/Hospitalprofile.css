@@ -122,6 +122,12 @@
   color: var(--color-muted);
 }
 
+.optional-hint {
+  color: var(--color-muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+
 .profile-form input {
   font: inherit;
   padding: 11px 13px;

@@ -104,7 +104,7 @@ router.get('/overview', async (req, res) => {
 router.get('/profile', async (req, res) => {
   try {
     const hospital = await Hospital.findById(req.auth.id)
-      .select('hospitalName loginId state city address pincode bedsTotal departments');
+      .select('hospitalName loginId email state city address pincode bedsTotal departments');
     if (!hospital) {
       return res.status(404).json({ message: 'Hospital not found.' });
     }
@@ -122,13 +122,14 @@ router.get('/profile', async (req, res) => {
 
 router.put('/profile', async (req, res) => {
   try {
-    const { hospitalName, state, city, address, pincode, bedsTotal, departments } = req.body;
+    const { hospitalName, email, state, city, address, pincode, bedsTotal, departments } = req.body;
 
     const hospital = await Hospital.findByIdAndUpdate(
       req.auth.id,
       {
         $set: {
           ...(hospitalName !== undefined && { hospitalName }),
+          ...(email !== undefined && { email }),
           ...(state !== undefined && { state }),
           ...(city !== undefined && { city }),
           ...(address !== undefined && { address }),
@@ -138,7 +139,7 @@ router.put('/profile', async (req, res) => {
         },
       },
       { new: true, runValidators: true }
-    ).select('hospitalName loginId state city address pincode bedsTotal departments');
+    ).select('hospitalName loginId email state city address pincode bedsTotal departments');
 
     res.json({
       ...hospital.toObject(),

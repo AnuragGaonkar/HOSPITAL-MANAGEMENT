@@ -14,6 +14,7 @@ const HospitalSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  email: String, // used for password reset + contact
   state: String,
   city: String,
   address: String,
@@ -24,6 +25,10 @@ const HospitalSchema = new mongoose.Schema({
   doctorsCount: { type: Number, default: 0 },
   departments: { type: [String], default: [] },
   photoUrl: String,
+
+  // Password reset — token is hashed before storage, never stored raw.
+  resetPasswordTokenHash: String,
+  resetPasswordExpires: Date,
 
   // Approximate coordinates — used for the "nearest hospital" map
   // feature. Real hospitals should have this geocoded properly;

@@ -9,6 +9,10 @@ const patientSchema = new mongoose.Schema({
   height: Number,
   contactNumber: String,
   email: String,
+
+  // Password reset — token is hashed before storage, never stored raw.
+  resetPasswordTokenHash: String,
+  resetPasswordExpires: Date,
   address: String,
   emergencyContactName: String,
   emergencyContactRelation: String,

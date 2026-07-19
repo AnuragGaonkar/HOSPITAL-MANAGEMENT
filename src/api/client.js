@@ -15,4 +15,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// If a request comes back 401 (expired/invalid token), the session is
+// dead — clear it and bounce to Home instead of leaving the app in a
+// broken state where every request silently fails forever.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      window.localStorage.removeItem('hms-token');
+      window.localStorage.removeItem('hms-user');
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
