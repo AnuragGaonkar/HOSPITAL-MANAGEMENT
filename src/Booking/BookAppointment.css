@@ -422,6 +422,108 @@
 .availability-in-surgery { background: rgba(217, 43, 43, 0.12); color: #d92b2b; }
 .availability-in-surgery .availability-dot { background: #d92b2b; }
 
+.booking-mode-toggle {
+  display: flex;
+  gap: 6px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-bottom: 18px;
+}
+
+.booking-mode-toggle button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color var(--dur-fast) var(--ease-smooth), color var(--dur-fast) var(--ease-smooth);
+}
+
+.booking-mode-toggle button.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.booking-mode-toggle button.emergency.active {
+  background: #d92b2b;
+}
+
+.emergency-banner {
+  background: rgba(217, 43, 43, 0.08);
+  border: 1px solid rgba(217, 43, 43, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+.slot-grid-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slot-grid-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.slot-btn {
+  padding: 9px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color var(--dur-fast) var(--ease-smooth),
+              border-color var(--dur-fast) var(--ease-smooth),
+              transform var(--dur-fast) var(--ease-smooth);
+}
+
+.slot-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.slot-btn.selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.slot-btn:disabled {
+  background: transparent;
+  color: var(--color-muted);
+  text-decoration: line-through;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn-emergency {
+  background: #d92b2b !important;
+}
+
+.btn-emergency:hover:not(:disabled) {
+  background: #c22525 !important;
+}
+
 .booking-panel-form {
   display: flex;
   flex-direction: column;

@@ -252,7 +252,7 @@ router.get('/doctors', async (req, res) => {
 // ---------- Add a doctor ----------
 router.post('/doctors', async (req, res) => {
   try {
-    const { name, specialization, experienceYears, availability, contact } = req.body;
+    const { name, specialization, experienceYears, availability, contact, workingHours } = req.body;
     if (!name || !specialization) {
       return res.status(400).json({ message: 'Name and specialization are required.' });
     }
@@ -263,6 +263,7 @@ router.post('/doctors', async (req, res) => {
       experienceYears: experienceYears || 1,
       availability: availability || 'available',
       contact,
+      workingHours,
     });
     res.status(201).json(doctor);
   } catch (error) {
@@ -274,10 +275,10 @@ router.post('/doctors', async (req, res) => {
 // ---------- Edit a doctor ----------
 router.put('/doctors/:id', async (req, res) => {
   try {
-    const { name, specialization, experienceYears, availability, contact } = req.body;
+    const { name, specialization, experienceYears, availability, contact, workingHours } = req.body;
     const doctor = await Doctor.findOneAndUpdate(
       { _id: req.params.id, hospital: req.auth.id },
-      { name, specialization, experienceYears, availability, contact },
+      { name, specialization, experienceYears, availability, contact, workingHours },
       { new: true, runValidators: true }
     );
     if (!doctor) {

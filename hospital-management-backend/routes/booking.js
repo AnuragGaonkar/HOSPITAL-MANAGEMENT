@@ -5,6 +5,7 @@ const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { computeBedsAvailable } = require('../utils/beds');
+const { generateDoctorSlots } = require('../utils/slots');
 
 const router = express.Router();
 
@@ -48,13 +49,72 @@ router.get('/hospitals/:id/doctors', requireAuth, requireRole('patient'), async 
   }
 });
 
+// ---------- Slot availability for a department, on a given date ----------
+// Merges every non-on-leave doctor's individual schedule in this
+// department into one shared grid: a time is "available" if at least
+// one doctor is free then, so the patient never picks a specific
+// doctor — same auto-assignment model as booking itself.
+router.get('/hospitals/:id/departments/:department/slots', requireAuth, requireRole('patient'), async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ message: 'A date is required.' });
+    }
+
+    const doctors = await Doctor.find({
+      hospital: req.params.id,
+      specialization: req.params.department,
+      availability: { $ne: 'on-leave' },
+    });
+
+    if (doctors.length === 0) {
+      return res.json([]);
+    }
+
+    const bookedByDoctor = new Map();
+    const appointments = await Appointment.find({
+      doctor: { $in: doctors.map((d) => d._id) },
+      date,
+      status: 'scheduled',
+    }).select('doctor time');
+    appointments.forEach((a) => {
+      const key = String(a.doctor);
+      if (!bookedByDoctor.has(key)) bookedByDoctor.set(key, new Set());
+      bookedByDoctor.get(key).add(a.time);
+    });
+
+    const availableTimes = new Set();
+    const allTimes = new Set();
+
+    doctors.forEach((doc) => {
+      const taken = bookedByDoctor.get(String(doc._id)) || new Set();
+      generateDoctorSlots(doc, date).forEach((time) => {
+        allTimes.add(time);
+        if (!taken.has(time)) availableTimes.add(time);
+      });
+    });
+
+    const slots = Array.from(allTimes)
+      .sort()
+      .map((time) => ({ time, available: availableTimes.has(time) }));
+
+    res.json(slots);
+  } catch (error) {
+    console.error('Error fetching slots:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
 // ---------- Book an appointment ----------
 router.post('/appointments', requireAuth, requireRole('patient'), async (req, res) => {
   try {
-    const { hospitalId, department, date, time, requiresBed } = req.body;
+    const { hospitalId, department, date, time, requiresBed, isEmergency } = req.body;
 
-    if (!hospitalId || !department || !date || !time) {
-      return res.status(400).json({ message: 'Hospital, department, date, and time are required.' });
+    if (!hospitalId || !department) {
+      return res.status(400).json({ message: 'Hospital and department are required.' });
+    }
+    if (!isEmergency && (!date || !time)) {
+      return res.status(400).json({ message: 'Date and time are required for a scheduled visit.' });
     }
 
     const hospital = await Hospital.findById(hospitalId);
@@ -77,17 +137,55 @@ router.post('/appointments', requireAuth, requireRole('patient'), async (req, re
       return res.status(400).json({ message: `No available doctors in ${department} at this hospital right now.` });
     }
 
+    let bookingDate = date;
+    let bookingTime = time;
+    let eligibleDoctors = candidateDoctors;
+
+    if (isEmergency) {
+      // Skip the slot grid entirely — an emergency can't wait for a
+      // free 30-minute square. Use second-level precision on the
+      // timestamp so simultaneous emergencies routed to the same
+      // doctor don't collide with the scheduled-visit uniqueness
+      // guard (multiple urgent patients queuing to one doctor within
+      // the same minute is normal triage, not a booking conflict).
+      const now = new Date();
+      bookingDate = now.toISOString().slice(0, 10);
+      bookingTime = now.toTimeString().slice(0, 8); // HH:MM:SS
+    } else {
+      // Scheduled visit — only doctors who are actually free at this
+      // exact slot are eligible, re-checked here even though the
+      // frontend already showed a slot grid (that grid can go stale
+      // between page load and submit).
+      const appointmentsAtTime = await Appointment.find({
+        doctor: { $in: candidateDoctors.map((d) => d._id) },
+        date,
+        time,
+        status: 'scheduled',
+      }).select('doctor');
+      const bookedDoctorIds = new Set(appointmentsAtTime.map((a) => String(a.doctor)));
+
+      eligibleDoctors = candidateDoctors.filter((doc) => {
+        if (bookedDoctorIds.has(String(doc._id))) return false;
+        const daySlots = generateDoctorSlots(doc, date);
+        return daySlots.includes(time);
+      });
+
+      if (eligibleDoctors.length === 0) {
+        return res.status(409).json({ message: 'That slot was just taken — please pick another time.' });
+      }
+    }
+
     const loadCounts = await Appointment.aggregate([
-      { $match: { doctor: { $in: candidateDoctors.map((d) => d._id) }, status: 'scheduled' } },
+      { $match: { doctor: { $in: eligibleDoctors.map((d) => d._id) }, status: 'scheduled' } },
       { $group: { _id: '$doctor', count: { $sum: 1 } } },
     ]);
     const loadMap = new Map(loadCounts.map((l) => [String(l._id), l.count]));
 
-    const assignedDoctor = candidateDoctors.reduce((least, doc) => {
+    const assignedDoctor = eligibleDoctors.reduce((least, doc) => {
       const load = loadMap.get(String(doc._id)) || 0;
       const leastLoad = loadMap.get(String(least._id)) || 0;
       return load < leastLoad ? doc : least;
-    }, candidateDoctors[0]);
+    }, eligibleDoctors[0]);
 
     if (requiresBed) {
       const bedsAvailable = await computeBedsAvailable(hospital);
@@ -96,16 +194,28 @@ router.post('/appointments', requireAuth, requireRole('patient'), async (req, re
       }
     }
 
-    const appointment = await Appointment.create({
-      patient: patient._id,
-      patientName: patient.fullName,
-      hospital: hospital._id,
-      doctor: assignedDoctor._id,
-      department,
-      date,
-      time,
-      requiresBed: !!requiresBed,
-    });
+    let appointment;
+    try {
+      appointment = await Appointment.create({
+        patient: patient._id,
+        patientName: patient.fullName,
+        hospital: hospital._id,
+        doctor: assignedDoctor._id,
+        department,
+        date: bookingDate,
+        time: bookingTime,
+        requiresBed: !!requiresBed,
+        isEmergency: !!isEmergency,
+      });
+    } catch (createError) {
+      // The DB-level unique index caught a race we missed above — two
+      // requests slipped through the earlier check at nearly the same
+      // instant. Tell the patient to just try again / pick another slot.
+      if (createError.code === 11000) {
+        return res.status(409).json({ message: 'That slot was just taken — please pick another time.' });
+      }
+      throw createError;
+    }
 
     res.status(201).json({
       appointment,

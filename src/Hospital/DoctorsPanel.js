@@ -17,6 +17,57 @@ function AvailabilityBadge({ status }) {
   );
 }
 
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function WorkingHoursEditor({ value, onChange }) {
+  const hours = value || { start: '09:00', end: '17:00', daysOff: [0] };
+
+  const toggleDay = (dayIndex) => {
+    const daysOff = hours.daysOff.includes(dayIndex)
+      ? hours.daysOff.filter((d) => d !== dayIndex)
+      : [...hours.daysOff, dayIndex];
+    onChange({ ...hours, daysOff });
+  };
+
+  return (
+    <div className="working-hours-editor">
+      <div className="doctor-edit-row">
+        <label>
+          Working from
+          <input
+            type="time"
+            value={hours.start}
+            onChange={(e) => onChange({ ...hours, start: e.target.value })}
+          />
+        </label>
+        <label>
+          Working until
+          <input
+            type="time"
+            value={hours.end}
+            onChange={(e) => onChange({ ...hours, end: e.target.value })}
+          />
+        </label>
+      </div>
+      <label>
+        Days off
+        <div className="days-off-grid">
+          {DAY_LABELS.map((label, i) => (
+            <button
+              type="button"
+              key={label}
+              className={`day-off-toggle ${hours.daysOff.includes(i) ? 'off' : ''}`}
+              onClick={() => toggleDay(i)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </label>
+    </div>
+  );
+}
+
 function AddDoctorForm({ onSave, onCancel, saving, defaultDepartment }) {
   const [form, setForm] = useState({
     name: '',
@@ -24,6 +75,7 @@ function AddDoctorForm({ onSave, onCancel, saving, defaultDepartment }) {
     experienceYears: 1,
     availability: 'available',
     contact: '',
+    workingHours: { start: '09:00', end: '17:00', daysOff: [0] },
   });
 
   const handleChange = (e) => {
@@ -68,6 +120,12 @@ function AddDoctorForm({ onSave, onCancel, saving, defaultDepartment }) {
         Contact
         <input name="contact" value={form.contact} onChange={handleChange} placeholder="+91 ..." />
       </label>
+
+      <WorkingHoursEditor
+        value={form.workingHours}
+        onChange={(workingHours) => setForm((prev) => ({ ...prev, workingHours }))}
+      />
+
       <div className="doctor-edit-actions">
         <button type="button" className="doctor-edit-cancel" onClick={onCancel}>Cancel</button>
         <button type="submit" className="doctor-edit-save" disabled={saving}>
@@ -85,6 +143,7 @@ function EditDoctorForm({ doctor, onSave, onCancel, saving, onPhotoUploaded }) {
     experienceYears: doctor.experienceYears,
     availability: doctor.availability,
     contact: doctor.contact || '',
+    workingHours: doctor.workingHours || { start: '09:00', end: '17:00', daysOff: [0] },
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');
@@ -164,6 +223,12 @@ function EditDoctorForm({ doctor, onSave, onCancel, saving, onPhotoUploaded }) {
         Contact
         <input name="contact" value={form.contact} onChange={handleChange} />
       </label>
+
+      <WorkingHoursEditor
+        value={form.workingHours}
+        onChange={(workingHours) => setForm((prev) => ({ ...prev, workingHours }))}
+      />
+
       <div className="doctor-edit-actions">
         <button type="button" className="doctor-edit-cancel" onClick={onCancel}>Cancel</button>
         <button type="submit" className="doctor-edit-save" disabled={saving}>
