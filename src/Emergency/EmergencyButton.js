@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import './EmergencyButton.css';
 
 // Mobile-only SOS control. Captures the user's real location via the
-// Geolocation API and simulates dispatch/tracking locally.
-//
-// BACKEND TODO: replace `simulateDispatch()` with a real call, e.g.
-//   POST /api/emergency  { lat, lng, timestamp }
-// and swap the simulated ETA/progress for live data (e.g. via WebSocket
-// or polling GET /api/emergency/:id) once the ambulance-dispatch API exists.
+// Geolocation API and dispatches a real request to the backend, which
+// finds the actual nearest hospital and assigns a real doctor.
 
 const STAGES = {
   IDLE: 'idle',
@@ -16,25 +15,11 @@ const STAGES = {
   DISPATCHING: 'dispatching',
   TRACKING: 'tracking',
   ERROR: 'error',
+  NEEDS_LOGIN: 'needs-login',
 };
 
-function simulateDispatch(coords) {
-  // Fake network + ambulance assignment latency.
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        hospitalName: 'Sunrise General Hospital',
-        distanceKm: (Math.random() * 4 + 1.2).toFixed(1),
-        etaMinutes: Math.floor(Math.random() * 8) + 5,
-        ambulanceId: `AMB-${Math.floor(1000 + Math.random() * 9000)}`,
-        doctorName: 'Dr. R. Mehta',
-        coords,
-      });
-    }, 1400);
-  });
-}
-
 export default function EmergencyButton() {
+  const { isAuthenticated, user } = useAuth();
   const [stage, setStage] = useState(STAGES.IDLE);
   const [dispatch, setDispatch] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -57,7 +42,13 @@ export default function EmergencyButton() {
     setErrorMsg('');
   };
 
-  const startEmergency = () => setStage(STAGES.CONFIRM);
+  const startEmergency = () => {
+    if (!isAuthenticated || user.role !== 'patient') {
+      setStage(STAGES.NEEDS_LOGIN);
+      return;
+    }
+    setStage(STAGES.CONFIRM);
+  };
 
   const confirmEmergency = () => {
     if (!('geolocation' in navigator)) {
@@ -68,14 +59,18 @@ export default function EmergencyButton() {
     setStage(STAGES.LOCATING);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const coords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
         setStage(STAGES.DISPATCHING);
-        const result = await simulateDispatch(coords);
-        setDispatch(result);
-        setStage(STAGES.TRACKING);
+        try {
+          const res = await api.post('/emergency', {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+          setDispatch(res.data);
+          setStage(STAGES.TRACKING);
+        } catch (err) {
+          setErrorMsg(err.response?.data?.message || 'Could not reach dispatch. Please call emergency services directly.');
+          setStage(STAGES.ERROR);
+        }
       },
       () => {
         setErrorMsg('Location permission was denied. We need it to send help to you.');
@@ -107,6 +102,23 @@ export default function EmergencyButton() {
       {stage !== STAGES.IDLE && (
         <div className="emergency-overlay" role="dialog" aria-modal="true">
           <div className="emergency-sheet">
+            {stage === STAGES.NEEDS_LOGIN && (
+              <>
+                <h3>Log in to request help</h3>
+                <p>
+                  Emergency dispatch needs to know who and where you are, so
+                  it's tied to a patient account. Log in or create one —
+                  it only takes a moment.
+                </p>
+                <div className="emergency-actions">
+                  <button className="btn-secondary" onClick={closeAll}>Cancel</button>
+                  <Link to="/login/patient" className="btn-emergency" onClick={closeAll}>
+                    Log In
+                  </Link>
+                </div>
+              </>
+            )}
+
             {stage === STAGES.CONFIRM && (
               <>
                 <h3>Request emergency help?</h3>

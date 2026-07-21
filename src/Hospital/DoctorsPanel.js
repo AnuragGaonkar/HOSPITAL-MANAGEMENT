@@ -449,8 +449,11 @@ export default function DoctorsPanel({ open, department, onClose }) {
                       <ul className="doctor-patients-list">
                         {patientCount === 0 && <li className="doctor-patients-empty">No patients assigned yet.</li>}
                         {doc.assignedPatients?.map((p, idx) => (
-                          <li key={idx}>
-                            <span>{p.patientName}</span>
+                          <li key={idx} className={p.isEmergency ? 'emergency' : ''}>
+                            <span>
+                              {p.patientName}
+                              {p.isEmergency && <span className="emergency-badge">🚨 Urgent</span>}
+                            </span>
                             <span className="doctor-patient-meta">
                               {p.date} · {p.time}{p.requiresBed ? ' · 🛏️ bed held' : ''}
                             </span>

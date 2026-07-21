@@ -42,13 +42,24 @@ function BedsCard({ bedsAvailable, bedsTotal, delay }) {
 
 function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') === 'inventory' ? 'inventory' : 'overview';
+  const TABS = ['overview', 'inventory', 'appointments'];
+  const activeTab = TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'overview';
+  const activeTabIndex = TABS.indexOf(activeTab);
 
   const [overview, setOverview] = useState(null);
   const [overviewError, setOverviewError] = useState('');
   const [loadingOverview, setLoadingOverview] = useState(true);
 
   const [items, setItems] = useState([]);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editForm, setEditForm] = useState({ quantity: 0, reorderLevel: 0, unitPrice: 0 });
+  const [savingItemId, setSavingItemId] = useState(null);
+  const [inventorySearch, setInventorySearch] = useState('');
+
+  const [appointments, setAppointments] = useState([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState('');
+  const [updatingApptId, setUpdatingApptId] = useState(null);
   const [inventoryError, setInventoryError] = useState('');
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -62,7 +73,7 @@ function Dashboard() {
   const [pendingHighlight, setPendingHighlight] = useState(false);
   const highlightTimeoutRef = useRef(null);
 
-  const setTab = (tab) => setSearchParams(tab === 'inventory' ? { tab: 'inventory' } : {});
+  const setTab = (tab) => setSearchParams(tab === 'overview' ? {} : { tab });
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +99,33 @@ function Dashboard() {
       loadInventory();
     }
   }, [activeTab, loadInventory]);
+
+  const loadAppointments = useCallback(() => {
+    setLoadingAppointments(true);
+    setAppointmentsError('');
+    api.get('/hospital/appointments')
+      .then((res) => setAppointments(res.data))
+      .catch((err) => setAppointmentsError(err.response?.data?.message || 'Could not load appointments.'))
+      .finally(() => setLoadingAppointments(false));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'appointments') {
+      loadAppointments();
+    }
+  }, [activeTab, loadAppointments]);
+
+  const updateAppointmentStatus = async (id, status) => {
+    setUpdatingApptId(id);
+    try {
+      const res = await api.put(`/hospital/appointments/${id}/status`, { status });
+      setAppointments((prev) => prev.map((a) => (a._id === id ? res.data : a)));
+    } catch (err) {
+      setAppointmentsError(err.response?.data?.message || 'Could not update this appointment.');
+    } finally {
+      setUpdatingApptId(null);
+    }
+  };
 
   // Scroll to + flash-highlight the low-stock rows twice, then clear.
   useEffect(() => {
@@ -128,6 +166,40 @@ function Dashboard() {
     }
   };
 
+  const startEditItem = (item) => {
+    setEditingItemId(item._id);
+    setEditForm({
+      quantity: item.stockInformation?.quantity ?? 0,
+      reorderLevel: item.stockInformation?.reorderLevel ?? 0,
+      unitPrice: item.stockInformation?.unitPrice ?? 0,
+    });
+  };
+
+  const cancelEditItem = () => setEditingItemId(null);
+
+  const saveEditItem = async (id) => {
+    setSavingItemId(id);
+    try {
+      const res = await api.put(`/hospital/inventory/${id}`, {
+        'stockInformation.quantity': Number(editForm.quantity),
+        'stockInformation.reorderLevel': Number(editForm.reorderLevel),
+        'stockInformation.unitPrice': Number(editForm.unitPrice),
+      });
+      setItems((prev) => prev.map((item) => (item._id === id ? { ...item, ...res.data } : item)));
+      setEditingItemId(null);
+    } catch (err) {
+      setInventoryError(err.response?.data?.message || 'Could not update that item.');
+    } finally {
+      setSavingItemId(null);
+    }
+  };
+
+  const filteredItems = items.filter((item) => {
+    const q = inventorySearch.trim().toLowerCase();
+    if (!q) return true;
+    return item.itemName?.toLowerCase().includes(q) || item.sku?.toLowerCase().includes(q);
+  });
+
   const openDoctors = (department = null) => {
     setDoctorsDepartment(department);
     setDoctorsPanelOpen(true);
@@ -146,7 +218,7 @@ function Dashboard() {
 
         <div className="dashboard-layout">
         <div className="dashboard-main">
-        <div className="dashboard-tabs">
+        <div className="dashboard-tabs" style={{ '--tab-count': TABS.length }}>
           <button
             type="button"
             className={activeTab === 'overview' ? 'active' : ''}
@@ -161,7 +233,18 @@ function Dashboard() {
           >
             Inventory
           </button>
-          <span className={`dashboard-tabs-indicator ${activeTab === 'inventory' ? 'right' : ''}`} aria-hidden="true" />
+          <button
+            type="button"
+            className={activeTab === 'appointments' ? 'active' : ''}
+            onClick={() => setTab('appointments')}
+          >
+            Appointments
+          </button>
+          <span
+            className="dashboard-tabs-indicator"
+            style={{ transform: `translateX(${activeTabIndex * 100}%)` }}
+            aria-hidden="true"
+          />
         </div>
 
         {activeTab === 'overview' && (
@@ -255,7 +338,14 @@ function Dashboard() {
         {activeTab === 'inventory' && (
           <section>
             <div className="inventory-toolbar">
-              <span>{items.length} item{items.length === 1 ? '' : 's'}</span>
+              <span>{filteredItems.length} of {items.length} item{items.length === 1 ? '' : 's'}</span>
+              <input
+                type="text"
+                className="inventory-search"
+                placeholder="Search items or SKU…"
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+              />
               <Link to="/hospital/inventory/new" className="btn-primary-link">+ Add Item</Link>
             </div>
 
@@ -266,7 +356,11 @@ function Dashboard() {
               <p className="dashboard-status">No inventory items yet. Add your first one above.</p>
             )}
 
-            {items.length > 0 && (
+            {!loadingInventory && items.length > 0 && filteredItems.length === 0 && (
+              <p className="dashboard-status">No items match "{inventorySearch}".</p>
+            )}
+
+            {filteredItems.length > 0 && (
               <div className="inventory-table-wrap">
                 <table className="inventory-table">
                   <thead>
@@ -280,8 +374,51 @@ function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => {
+                    {filteredItems.map((item) => {
                       const low = item.stockInformation?.quantity <= item.stockInformation?.reorderLevel;
+                      const isEditing = editingItemId === item._id;
+
+                      if (isEditing) {
+                        return (
+                          <tr key={item._id} className="editing-row">
+                            <td>{item.itemName}</td>
+                            <td>{item.itemCategory}</td>
+                            <td>{item.sku}</td>
+                            <td>
+                              <input
+                                type="number"
+                                className="row-edit-input"
+                                min="0"
+                                value={editForm.quantity}
+                                onChange={(e) => setEditForm((f) => ({ ...f, quantity: e.target.value }))}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                className="row-edit-input"
+                                min="0"
+                                value={editForm.reorderLevel}
+                                onChange={(e) => setEditForm((f) => ({ ...f, reorderLevel: e.target.value }))}
+                              />
+                            </td>
+                            <td className="row-edit-actions">
+                              <button
+                                type="button"
+                                className="row-save"
+                                onClick={() => saveEditItem(item._id)}
+                                disabled={savingItemId === item._id}
+                              >
+                                {savingItemId === item._id ? '…' : 'Save'}
+                              </button>
+                              <button type="button" className="row-cancel" onClick={cancelEditItem}>
+                                Cancel
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      }
+
                       return (
                         <tr key={item._id} className={low ? 'low-stock' : ''}>
                           <td>{item.itemName}</td>
@@ -292,7 +429,14 @@ function Dashboard() {
                             {low && <span className="low-badge">Low</span>}
                           </td>
                           <td>{item.stockInformation?.reorderLevel}</td>
-                          <td>
+                          <td className="row-edit-actions">
+                            <button
+                              type="button"
+                              className="row-edit"
+                              onClick={() => startEditItem(item)}
+                            >
+                              Restock
+                            </button>
                             <button
                               type="button"
                               className="row-delete"
@@ -305,6 +449,78 @@ function Dashboard() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'appointments' && (
+          <section>
+            <div className="inventory-toolbar">
+              <span>{appointments.length} appointment{appointments.length === 1 ? '' : 's'}</span>
+            </div>
+
+            {loadingAppointments && <p className="dashboard-status">Loading appointments…</p>}
+            {appointmentsError && <p className="dashboard-status error">{appointmentsError}</p>}
+
+            {!loadingAppointments && appointments.length === 0 && !appointmentsError && (
+              <p className="dashboard-status">No appointments booked yet.</p>
+            )}
+
+            {appointments.length > 0 && (
+              <div className="inventory-table-wrap">
+                <table className="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>Patient</th>
+                      <th>Doctor</th>
+                      <th>Department</th>
+                      <th>Date / Time</th>
+                      <th>Bed</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {appointments.map((appt) => (
+                      <tr key={appt._id} className={appt.isEmergency ? 'emergency-row' : ''}>
+                        <td>
+                          {appt.patientName}
+                          {appt.isEmergency && <span className="emergency-badge">🚨 Urgent</span>}
+                        </td>
+                        <td>{appt.doctor?.name || '—'}</td>
+                        <td>{appt.department}</td>
+                        <td>{appt.date} · {appt.time}</td>
+                        <td>{appt.requiresBed ? '🛏️ Yes' : '—'}</td>
+                        <td>
+                          <span className={`appt-status appt-status-${appt.status}`}>{appt.status}</span>
+                        </td>
+                        <td className="row-edit-actions">
+                          {appt.status === 'scheduled' && (
+                            <>
+                              <button
+                                type="button"
+                                className="row-save"
+                                onClick={() => updateAppointmentStatus(appt._id, 'completed')}
+                                disabled={updatingApptId === appt._id}
+                              >
+                                {updatingApptId === appt._id ? '…' : 'Complete'}
+                              </button>
+                              <button
+                                type="button"
+                                className="row-delete"
+                                onClick={() => updateAppointmentStatus(appt._id, 'cancelled')}
+                                disabled={updatingApptId === appt._id}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -340,6 +556,7 @@ function Dashboard() {
             <button type="button" className="sidebar-action" onClick={() => openDoctors(null)}>
               👥 View All Doctors
             </button>
+            <Link to="/hospital/profile" className="sidebar-action">✏️ Edit Hospital Profile</Link>
             <button
               type="button"
               className="sidebar-action"

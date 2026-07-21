@@ -245,6 +245,23 @@
   padding: 8px 10px;
 }
 
+.doctor-patients-list li.emergency {
+  border-left: 3px solid #d92b2b;
+}
+
+.emergency-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(217, 43, 43, 0.12);
+  color: #d92b2b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+
 .doctor-patients-empty {
   color: var(--color-muted);
   justify-content: flex-start !important;

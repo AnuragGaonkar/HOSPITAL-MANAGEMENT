@@ -223,7 +223,7 @@ router.get('/doctors', async (req, res) => {
     const appointments = await Appointment.find({
       doctor: { $in: doctorIds },
       status: 'scheduled',
-    }).select('doctor patientName date time requiresBed');
+    }).select('doctor patientName date time requiresBed isEmergency');
 
     const patientsByDoctor = new Map();
     appointments.forEach((appt) => {
@@ -234,6 +234,7 @@ router.get('/doctors', async (req, res) => {
         date: appt.date,
         time: appt.time,
         requiresBed: appt.requiresBed,
+        isEmergency: appt.isEmergency,
       });
     });
 
