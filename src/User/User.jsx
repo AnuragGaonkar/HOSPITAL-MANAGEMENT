@@ -8,6 +8,97 @@ function StatusBadge({ status }) {
   return <span className={`user-appt-status user-appt-status-${status}`}>{status}</span>;
 }
 
+function RescheduleModal({ appointment, onClose, onRescheduled }) {
+  const [date, setDate] = useState('');
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedTime, setSelectedTime] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (!date) {
+      setSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    setSelectedTime('');
+    api.get(`/hospitals/${appointment.hospital._id}/departments/${encodeURIComponent(appointment.department)}/slots`, { params: { date } })
+      .then((res) => setSlots(res.data))
+      .catch(() => setSlots([]))
+      .finally(() => setLoadingSlots(false));
+  }, [date, appointment]);
+
+  const handleConfirm = async () => {
+    if (!selectedTime) {
+      setError('Pick a time slot first.');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    try {
+      const res = await api.put(`/appointments/${appointment._id}/reschedule`, { date, time: selectedTime });
+      onRescheduled(res.data.appointment);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not reschedule this appointment.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="reschedule-overlay open" onClick={onClose} />
+      <div className="reschedule-modal open">
+        <div className="reschedule-header">
+          <h3>Reschedule Visit</h3>
+          <button type="button" className="reschedule-close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+        <p className="reschedule-sub">
+          {appointment.hospital?.hospitalName} · {appointment.department}
+        </p>
+
+        <label className="reschedule-date-label">
+          New date
+          <input type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+
+        {date && (
+          <div className="slot-grid-wrap">
+            {loadingSlots && <p className="booking-panel-status">Loading times…</p>}
+            {!loadingSlots && slots.length === 0 && (
+              <p className="booking-panel-status">No doctors work this department on that date.</p>
+            )}
+            {slots.length > 0 && (
+              <div className="slot-grid">
+                {slots.map((s) => (
+                  <button
+                    type="button"
+                    key={s.time}
+                    className={`slot-btn ${selectedTime === s.time ? 'selected' : ''}`}
+                    disabled={!s.available}
+                    onClick={() => setSelectedTime(s.time)}
+                  >
+                    {s.time}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && <p className="booking-panel-status error">{error}</p>}
+
+        <button type="button" className="btn-primary" onClick={handleConfirm} disabled={submitting || !selectedTime}>
+          {submitting ? 'Saving…' : 'Confirm New Time'}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function User() {
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState('');
@@ -17,6 +108,7 @@ function User() {
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointmentsError, setAppointmentsError] = useState('');
   const [cancellingId, setCancellingId] = useState(null);
+  const [reschedulingAppt, setReschedulingAppt] = useState(null);
 
   useEffect(() => {
     api.get('/patient/profile')
@@ -62,17 +154,29 @@ function User() {
         <span className="appt-meta">
           {appt.date} · {appt.time}
           {appt.requiresBed && ' · 🛏️ Bed held'}
+          {appt.isEmergency && ' · 🚨 Urgent visit'}
         </span>
       </div>
       {appt.status === 'scheduled' && (
-        <button
-          type="button"
-          className="appt-cancel-btn"
-          onClick={() => handleCancel(appt._id)}
-          disabled={cancellingId === appt._id}
-        >
-          {cancellingId === appt._id ? '…' : 'Cancel'}
-        </button>
+        <div className="appt-actions">
+          {!appt.isEmergency && (
+            <button
+              type="button"
+              className="appt-reschedule-btn"
+              onClick={() => setReschedulingAppt(appt)}
+            >
+              Reschedule
+            </button>
+          )}
+          <button
+            type="button"
+            className="appt-cancel-btn"
+            onClick={() => handleCancel(appt._id)}
+            disabled={cancellingId === appt._id}
+          >
+            {cancellingId === appt._id ? '…' : 'Cancel'}
+          </button>
+        </div>
       )}
     </div>
   );

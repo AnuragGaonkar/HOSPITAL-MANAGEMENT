@@ -265,4 +265,89 @@ router.put('/appointments/:id/cancel', requireAuth, requireRole('patient'), asyn
   }
 });
 
+// ---------- Reschedule a scheduled visit ----------
+// Not available for emergency bookings — those never had a specific
+// slot to move in the first place. Re-runs the same doctor-assignment
+// logic against the new date/time, since the original doctor may not
+// be free then; a different (still least-loaded, still available)
+// doctor could end up assigned.
+router.put('/appointments/:id/reschedule', requireAuth, requireRole('patient'), async (req, res) => {
+  try {
+    const { date, time } = req.body;
+    if (!date || !time) {
+      return res.status(400).json({ message: 'A new date and time are required.' });
+    }
+
+    const appointment = await Appointment.findOne({ _id: req.params.id, patient: req.auth.id });
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found.' });
+    }
+    if (appointment.status !== 'scheduled') {
+      return res.status(400).json({ message: 'Only upcoming scheduled visits can be rescheduled.' });
+    }
+    if (appointment.isEmergency) {
+      return res.status(400).json({ message: 'Emergency visits cannot be rescheduled.' });
+    }
+
+    const candidateDoctors = await Doctor.find({
+      hospital: appointment.hospital,
+      specialization: appointment.department,
+      availability: { $ne: 'on-leave' },
+    });
+    if (candidateDoctors.length === 0) {
+      return res.status(400).json({ message: 'No available doctors in this department right now.' });
+    }
+
+    const appointmentsAtTime = await Appointment.find({
+      doctor: { $in: candidateDoctors.map((d) => d._id) },
+      date,
+      time,
+      status: 'scheduled',
+      _id: { $ne: appointment._id },
+    }).select('doctor');
+    const bookedDoctorIds = new Set(appointmentsAtTime.map((a) => String(a.doctor)));
+
+    const eligibleDoctors = candidateDoctors.filter((doc) => {
+      if (bookedDoctorIds.has(String(doc._id))) return false;
+      return generateDoctorSlots(doc, date).includes(time);
+    });
+
+    if (eligibleDoctors.length === 0) {
+      return res.status(409).json({ message: 'That slot is not available — please pick another time.' });
+    }
+
+    const loadCounts = await Appointment.aggregate([
+      { $match: { doctor: { $in: eligibleDoctors.map((d) => d._id) }, status: 'scheduled', _id: { $ne: appointment._id } } },
+      { $group: { _id: '$doctor', count: { $sum: 1 } } },
+    ]);
+    const loadMap = new Map(loadCounts.map((l) => [String(l._id), l.count]));
+    const assignedDoctor = eligibleDoctors.reduce((least, doc) => {
+      const load = loadMap.get(String(doc._id)) || 0;
+      const leastLoad = loadMap.get(String(least._id)) || 0;
+      return load < leastLoad ? doc : least;
+    }, eligibleDoctors[0]);
+
+    appointment.date = date;
+    appointment.time = time;
+    appointment.doctor = assignedDoctor._id;
+
+    try {
+      await appointment.save();
+    } catch (saveError) {
+      if (saveError.code === 11000) {
+        return res.status(409).json({ message: 'That slot was just taken — please pick another time.' });
+      }
+      throw saveError;
+    }
+
+    res.json({
+      appointment,
+      assignedDoctor: { name: assignedDoctor.name, specialization: assignedDoctor.specialization },
+    });
+  } catch (error) {
+    console.error('Error rescheduling appointment:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
 module.exports = router;

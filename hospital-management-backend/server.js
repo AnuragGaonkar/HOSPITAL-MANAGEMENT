@@ -9,6 +9,7 @@ const bookingRoutes = require('./routes/booking');
 const patientRoutes = require('./routes/patient');
 const passwordResetRoutes = require('./routes/passwordReset');
 const emergencyRoutes = require('./routes/emergency');
+const publicRoutes = require('./routes/public');
 const cors = require('cors');
 const path = require('path'); // Ensure path module is imported
 const fs = require('fs');
@@ -37,6 +38,7 @@ app.use('/', bookingRoutes);
 app.use('/patient', patientRoutes);
 app.use('/', passwordResetRoutes);
 app.use('/emergency', emergencyRoutes);
+app.use('/public', publicRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;
