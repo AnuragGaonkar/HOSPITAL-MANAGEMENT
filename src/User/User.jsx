@@ -40,7 +40,7 @@ function RescheduleModal({ appointment, onClose, onRescheduled }) {
     setSubmitting(true);
     try {
       const res = await api.put(`/appointments/${appointment._id}/reschedule`, { date, time: selectedTime });
-      onRescheduled(res.data.appointment);
+      onRescheduled(res.data.appointment, res.data.assignedDoctor);
     } catch (err) {
       setError(err.response?.data?.message || 'Could not reschedule this appointment.');
     } finally {
@@ -254,6 +254,21 @@ function User() {
           </aside>
         </div>
       </div>
+
+      {reschedulingAppt && (
+        <RescheduleModal
+          appointment={reschedulingAppt}
+          onClose={() => setReschedulingAppt(null)}
+          onRescheduled={(updatedAppt, assignedDoctor) => {
+            setAppointments((prev) => prev.map((a) => (
+              a._id === updatedAppt._id
+                ? { ...a, date: updatedAppt.date, time: updatedAppt.time, doctor: assignedDoctor }
+                : a
+            )));
+            setReschedulingAppt(null);
+          }}
+        />
+      )}
     </>
   );
 }
