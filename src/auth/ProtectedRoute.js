@@ -7,8 +7,6 @@ const LOGIN_PATH_BY_ROLE = {
   patient: '/login/patient',
 };
 
-// Wrap a <Route element={...}> with this to require login.
-// Optionally restrict to a specific role, e.g. <ProtectedRoute role="hospital">
 export default function ProtectedRoute({ children, role }) {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();

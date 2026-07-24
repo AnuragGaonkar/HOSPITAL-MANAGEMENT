@@ -10,7 +10,6 @@ const { computeBedsAvailable } = require('../utils/beds');
 
 const router = express.Router();
 
-// All routes here require a valid hospital login
 router.use(requireAuth, requireRole('hospital'));
 
 // Photo uploads (hospital's own photo, or a doctor's photo) land in
@@ -35,7 +34,6 @@ function startOfToday() {
   return d;
 }
 
-// ---------- Overview stats for the dashboard ----------
 router.get('/overview', async (req, res) => {
   try {
     const hospital = await Hospital.findById(req.auth.id);
@@ -61,7 +59,6 @@ router.get('/overview', async (req, res) => {
       createdAt: { $gte: startOfToday() },
     });
 
-    // Per-department doctor counts + how many of them are currently available.
     const departmentBreakdown = await Doctor.aggregate([
       { $match: { hospital: hospital._id } },
       {
@@ -100,7 +97,6 @@ router.get('/overview', async (req, res) => {
   }
 });
 
-// ---------- Hospital profile ----------
 router.get('/profile', async (req, res) => {
   try {
     const hospital = await Hospital.findById(req.auth.id)
@@ -110,8 +106,6 @@ router.get('/profile', async (req, res) => {
     }
     res.json({
       ...hospital.toObject(),
-      // Computed, read-only — see utils/beds.js. Not directly editable
-      // here since it's derived from active bed-holding appointments.
       bedsAvailable: await computeBedsAvailable(hospital),
     });
   } catch (error) {
@@ -168,8 +162,6 @@ router.put('/profile/photo', uploadPhoto.single('photo'), async (req, res) => {
   }
 });
 
-// ---------- Appointments (hospital view) ----------
-// Optional ?status=scheduled|completed|cancelled to filter
 router.get('/appointments', async (req, res) => {
   try {
     const filter = { hospital: req.auth.id };
@@ -207,10 +199,6 @@ router.put('/appointments/:id/status', async (req, res) => {
   }
 });
 
-// ---------- Doctors ----------
-// Optional ?department=Cardiology to filter the list.
-// Each doctor includes real assigned-patient data (name + count) pulled
-// from actual Appointment records — not a random number.
 router.get('/doctors', async (req, res) => {
   try {
     const filter = { hospital: req.auth.id };
@@ -249,7 +237,6 @@ router.get('/doctors', async (req, res) => {
   }
 });
 
-// ---------- Add a doctor ----------
 router.post('/doctors', async (req, res) => {
   try {
     const { name, specialization, experienceYears, availability, contact, workingHours } = req.body;
@@ -272,7 +259,6 @@ router.post('/doctors', async (req, res) => {
   }
 });
 
-// ---------- Edit a doctor ----------
 router.put('/doctors/:id', async (req, res) => {
   try {
     const { name, specialization, experienceYears, availability, contact, workingHours } = req.body;
@@ -291,7 +277,6 @@ router.put('/doctors/:id', async (req, res) => {
   }
 });
 
-// ---------- Remove a doctor ----------
 router.delete('/doctors/:id', async (req, res) => {
   try {
     const doctor = await Doctor.findOneAndDelete({ _id: req.params.id, hospital: req.auth.id });
@@ -325,7 +310,6 @@ router.put('/doctors/:id/photo', uploadPhoto.single('photo'), async (req, res) =
   }
 });
 
-// ---------- Inventory ----------
 router.get('/inventory', async (req, res) => {
   try {
     const items = await InventoryItem.find({ hospital: req.auth.id }).sort({ createdAt: -1 });

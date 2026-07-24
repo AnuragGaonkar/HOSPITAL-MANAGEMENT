@@ -14,8 +14,6 @@ function readStoredUser() {
   }
 }
 
-// Wrap the app in <AuthProvider> once (done in App.js). Any component
-// can then call useAuth() to read who's logged in, or to log in/out.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(readStoredUser);
 
