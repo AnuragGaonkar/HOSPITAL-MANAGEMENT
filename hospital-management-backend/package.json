@@ -8,7 +8,9 @@
     "dev": "node --watch server.js",
     "seed:mumbai": "node scripts/seedMumbaiHospitals.js",
     "seed:inventory": "node scripts/seedSampleInventory.js",
-    "seed:doctors": "node scripts/seedDoctors.js"
+    "seed:doctors": "node scripts/seedDoctors.js",
+    "photos:manifest": "node scripts/exportPhotoManifest.js",
+    "photos:import": "node scripts/importPhotos.js"
   },
   "keywords": [],
   "author": "",

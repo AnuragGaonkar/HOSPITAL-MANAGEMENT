@@ -19,14 +19,15 @@ const DoctorSchema = new mongoose.Schema({
   photoUrl: String,
 
   // Per-doctor working hours, used to generate bookable slots for
-  // normal (non-emergency) appointments. Slot length is fixed
-  // app-wide at 30 minutes (see utils/slots.js) so that multiple
-  // doctors' schedules can be merged into one shared time grid for
-  // patients — only start/end/daysOff vary per doctor.
+  // normal (non-emergency) appointments. Each doctor can set their
+  // own slot length now — the merge logic in utils/slots.js unions
+  // every doctor's own times by string match, so differing slot
+  // lengths across doctors in the same department coexist fine.
   workingHours: {
     start: { type: String, default: '09:00' }, // "HH:MM", 24hr
     end: { type: String, default: '17:00' },
     daysOff: { type: [Number], default: [0] }, // 0=Sunday ... 6=Saturday
+    slotMinutes: { type: Number, default: 30 }, // this doctor's own appointment length
   },
 }, {
   timestamps: true,

@@ -1,7 +1,10 @@
-// Fixed app-wide slot length. Kept as a constant (not per-doctor) so
-// that multiple doctors' individual schedules can be merged into one
-// shared time grid a patient picks from — only each doctor's
-// start/end/daysOff vary.
+// Default slot length, used only as a fallback for doctors that
+// predate the per-doctor slotMinutes field. Each doctor can now set
+// their own — the merge logic in routes/booking.js unions every
+// doctor's own generated times by string match, so differing slot
+// lengths across doctors in the same department coexist fine (they
+// just don't line up on the same grid ticks, which is fine since the
+// patient never books a specific doctor directly).
 const SLOT_MINUTES = 30;
 
 function timeToMinutes(hhmm) {
@@ -32,9 +35,10 @@ function generateDoctorSlots(doctor, dateStr) {
 
   const start = timeToMinutes(doctor.workingHours?.start || '09:00');
   const end = timeToMinutes(doctor.workingHours?.end || '17:00');
+  const slotMinutes = doctor.workingHours?.slotMinutes || SLOT_MINUTES;
 
   const slots = [];
-  for (let t = start; t + SLOT_MINUTES <= end; t += SLOT_MINUTES) {
+  for (let t = start; t + slotMinutes <= end; t += slotMinutes) {
     slots.push(minutesToTime(t));
   }
   return slots;

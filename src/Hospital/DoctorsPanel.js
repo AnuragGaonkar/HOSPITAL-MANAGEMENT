@@ -20,7 +20,7 @@ function AvailabilityBadge({ status }) {
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function WorkingHoursEditor({ value, onChange }) {
-  const hours = value || { start: '09:00', end: '17:00', daysOff: [0] };
+  const hours = value || { start: '09:00', end: '17:00', daysOff: [0], slotMinutes: 30 };
 
   const toggleDay = (dayIndex) => {
     const daysOff = hours.daysOff.includes(dayIndex)
@@ -50,6 +50,19 @@ function WorkingHoursEditor({ value, onChange }) {
         </label>
       </div>
       <label>
+        Appointment length
+        <select
+          value={hours.slotMinutes || 30}
+          onChange={(e) => onChange({ ...hours, slotMinutes: Number(e.target.value) })}
+        >
+          <option value={15}>15 minutes</option>
+          <option value={20}>20 minutes</option>
+          <option value={30}>30 minutes</option>
+          <option value={45}>45 minutes</option>
+          <option value={60}>60 minutes</option>
+        </select>
+      </label>
+      <label>
         Days off
         <div className="days-off-grid">
           {DAY_LABELS.map((label, i) => (
@@ -75,7 +88,7 @@ function AddDoctorForm({ onSave, onCancel, saving, defaultDepartment }) {
     experienceYears: 1,
     availability: 'available',
     contact: '',
-    workingHours: { start: '09:00', end: '17:00', daysOff: [0] },
+    workingHours: { start: '09:00', end: '17:00', daysOff: [0], slotMinutes: 30 },
   });
 
   const handleChange = (e) => {
@@ -143,7 +156,7 @@ function EditDoctorForm({ doctor, onSave, onCancel, saving, onPhotoUploaded }) {
     experienceYears: doctor.experienceYears,
     availability: doctor.availability,
     contact: doctor.contact || '',
-    workingHours: doctor.workingHours || { start: '09:00', end: '17:00', daysOff: [0] },
+    workingHours: doctor.workingHours || { start: '09:00', end: '17:00', daysOff: [0], slotMinutes: 30 },
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');

@@ -512,6 +512,45 @@
   color: #d92b2b;
 }
 
+.appt-filters-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.appt-filters-toolbar input,
+.appt-filters-toolbar select {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+}
+
+.appt-filters-toolbar input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.appt-filters-clear {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.appt-filters-clear:hover {
+  background: var(--color-bg);
+}
+
 .inventory-toolbar {
   margin: 0 0 16px;
   display: flex;

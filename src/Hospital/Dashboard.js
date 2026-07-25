@@ -60,6 +60,9 @@ function Dashboard() {
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [appointmentsError, setAppointmentsError] = useState('');
   const [updatingApptId, setUpdatingApptId] = useState(null);
+  const [apptStatusFilter, setApptStatusFilter] = useState('');
+  const [apptDateFilter, setApptDateFilter] = useState('');
+  const [apptSearch, setApptSearch] = useState('');
   const [inventoryError, setInventoryError] = useState('');
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -103,11 +106,14 @@ function Dashboard() {
   const loadAppointments = useCallback(() => {
     setLoadingAppointments(true);
     setAppointmentsError('');
-    api.get('/hospital/appointments')
+    const params = {};
+    if (apptStatusFilter) params.status = apptStatusFilter;
+    if (apptDateFilter) params.date = apptDateFilter;
+    api.get('/hospital/appointments', { params })
       .then((res) => setAppointments(res.data))
       .catch((err) => setAppointmentsError(err.response?.data?.message || 'Could not load appointments.'))
       .finally(() => setLoadingAppointments(false));
-  }, []);
+  }, [apptStatusFilter, apptDateFilter]);
 
   useEffect(() => {
     if (activeTab === 'appointments') {
@@ -198,6 +204,12 @@ function Dashboard() {
     const q = inventorySearch.trim().toLowerCase();
     if (!q) return true;
     return item.itemName?.toLowerCase().includes(q) || item.sku?.toLowerCase().includes(q);
+  });
+
+  const filteredAppointments = appointments.filter((appt) => {
+    const q = apptSearch.trim().toLowerCase();
+    if (!q) return true;
+    return appt.patientName?.toLowerCase().includes(q);
   });
 
   const openDoctors = (department = null) => {
@@ -458,8 +470,38 @@ function Dashboard() {
 
         {activeTab === 'appointments' && (
           <section>
+            <div className="appt-filters-toolbar">
+              <input
+                type="text"
+                className="inventory-search"
+                placeholder="Search by patient name…"
+                value={apptSearch}
+                onChange={(e) => setApptSearch(e.target.value)}
+              />
+              <select value={apptStatusFilter} onChange={(e) => setApptStatusFilter(e.target.value)}>
+                <option value="">All statuses</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <input
+                type="date"
+                value={apptDateFilter}
+                onChange={(e) => setApptDateFilter(e.target.value)}
+              />
+              {(apptStatusFilter || apptDateFilter || apptSearch) && (
+                <button
+                  type="button"
+                  className="appt-filters-clear"
+                  onClick={() => { setApptStatusFilter(''); setApptDateFilter(''); setApptSearch(''); }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
             <div className="inventory-toolbar">
-              <span>{appointments.length} appointment{appointments.length === 1 ? '' : 's'}</span>
+              <span>{filteredAppointments.length} of {appointments.length} appointment{appointments.length === 1 ? '' : 's'}</span>
             </div>
 
             {loadingAppointments && <p className="dashboard-status">Loading appointments…</p>}
@@ -468,8 +510,11 @@ function Dashboard() {
             {!loadingAppointments && appointments.length === 0 && !appointmentsError && (
               <p className="dashboard-status">No appointments booked yet.</p>
             )}
+            {!loadingAppointments && appointments.length > 0 && filteredAppointments.length === 0 && (
+              <p className="dashboard-status">No appointments match your filters.</p>
+            )}
 
-            {appointments.length > 0 && (
+            {filteredAppointments.length > 0 && (
               <div className="inventory-table-wrap">
                 <table className="inventory-table">
                   <thead>
@@ -484,7 +529,7 @@ function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {appointments.map((appt) => (
+                    {filteredAppointments.map((appt) => (
                       <tr key={appt._id} className={appt.isEmergency ? 'emergency-row' : ''}>
                         <td>
                           {appt.patientName}

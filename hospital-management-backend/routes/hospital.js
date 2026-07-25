@@ -176,6 +176,13 @@ router.get('/appointments', async (req, res) => {
     if (req.query.status) {
       filter.status = req.query.status;
     }
+    if (req.query.date) {
+      filter.date = req.query.date;
+    } else if (req.query.dateFrom || req.query.dateTo) {
+      filter.date = {};
+      if (req.query.dateFrom) filter.date.$gte = req.query.dateFrom;
+      if (req.query.dateTo) filter.date.$lte = req.query.dateTo;
+    }
     const appointments = await Appointment.find(filter)
       .populate('doctor', 'name specialization')
       .sort({ date: 1, time: 1 });
