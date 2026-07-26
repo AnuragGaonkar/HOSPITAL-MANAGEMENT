@@ -757,10 +757,7 @@
   background: rgba(217, 43, 43, 0.08);
 }
 
-.row-delete:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+
 
 @media (max-width: 600px) {
   .hospital-dashboard {
