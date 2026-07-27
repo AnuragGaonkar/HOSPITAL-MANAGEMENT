@@ -155,6 +155,13 @@ router.post('/login/hospital', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials.' });
     }
 
+    if (hospital.verificationStatus === 'pending') {
+      return res.status(403).json({ message: 'Your hospital registration is still pending admin approval.' });
+    }
+    if (hospital.verificationStatus === 'rejected') {
+      return res.status(403).json({ message: 'This hospital registration was not approved. Contact support for details.' });
+    }
+
     const token = signToken({ id: hospital._id, role: 'hospital' });
     res.json({
       token,

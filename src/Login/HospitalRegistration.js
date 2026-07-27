@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 import './LoginHospital.css';
 import Navbar from '../Navbar/Navbar';
@@ -11,7 +11,7 @@ function HospitalRegistration() {
   });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
+  const [submitted, setSubmitted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,7 +40,7 @@ function HospitalRegistration() {
         address: form.address,
         password: form.password,
       });
-      navigate('/login/hospital');
+      setSubmitted(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -61,6 +61,16 @@ function HospitalRegistration() {
           <h2>Register Your Hospital</h2>
           <p className="auth-subtitle">Join the network and manage your hospital online.</p>
 
+          {submitted ? (
+            <div className="auth-submitted-notice">
+              <p>
+                <strong>Registration submitted.</strong> An admin will review your
+                hospital before it can go live — you'll be able to log in once
+                it's approved.
+              </p>
+              <Link to="/login/hospital" className="auth-footnote">Go to login</Link>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} noValidate>
             <label>
               Hospital Name
@@ -136,10 +146,13 @@ function HospitalRegistration() {
               {submitting ? <span className="auth-spinner" aria-hidden="true" /> : 'Create Hospital Account'}
             </button>
           </form>
+          )}
 
-          <p className="auth-footnote">
-            Already registered? <Link to="/login/hospital">Log in instead</Link>
-          </p>
+          {!submitted && (
+            <p className="auth-footnote">
+              Already registered? <Link to="/login/hospital">Log in instead</Link>
+            </p>
+          )}
         </div>
       </div>
     </>

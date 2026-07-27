@@ -38,13 +38,15 @@ const HospitalSchema = new mongoose.Schema({
     lng: Number,
   },
 
-  // Not enforced yet — the admin verification/approval flow is a
-  // separate feature to be built later. Defaults to 'approved' so
-  // registration keeps working until that flow exists.
+  // Enforced now that the admin portal exists — new registrations
+  // start pending and can't log in until an admin approves them (see
+  // /login/hospital in routes/auth.js). Existing hospitals already in
+  // the database keep whatever status they were saved with; this
+  // default only applies going forward.
   verificationStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
-    default: 'approved',
+    default: 'pending',
   },
 }, {
   timestamps: true,
