@@ -180,3 +180,9 @@
 .auth-footnote a:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 26px 22px;
+  }
+}
