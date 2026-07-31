@@ -171,6 +171,23 @@
   color: var(--admin-accent-light);
 }
 
+.admin-toast {
+  max-width: 1100px;
+  margin: 16px auto 0;
+  padding: 12px 20px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-accent);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--admin-ink);
+}
+
+.admin-no-email {
+  color: var(--admin-muted);
+  font-style: italic;
+  font-size: 12px;
+}
+
 /* ---------- Main content ---------- */
 
 .admin-main {
@@ -253,6 +270,35 @@
   background: var(--admin-accent);
   border-color: var(--admin-accent);
   color: #fff;
+}
+
+.admin-section-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 24px 0 20px;
+  border-bottom: 1px solid var(--admin-border);
+  padding-bottom: 0;
+}
+
+.admin-section-tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--admin-muted);
+  padding: 10px 4px;
+  margin-right: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-section-tabs button.active {
+  color: var(--admin-ink);
+  border-bottom-color: var(--admin-accent);
+}
+
+.admin-emergency-tag {
+  font-size: 11px;
 }
 
 .admin-table-wrap {
