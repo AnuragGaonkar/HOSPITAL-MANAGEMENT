@@ -1,22 +1,145 @@
-const mongoose = require('mongoose');
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const Admin = require('../models/Admin');
+const Hospital = require('../models/Hospital');
+const Patient = require('../models/Patient');
+const Appointment = require('../models/Appointment');
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/jwt');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const { sendHospitalVerificationEmail } = require('../utils/email');
 
-// There is deliberately no public registration route for this model —
-// admin accounts are created only via scripts/createAdmin.js, run
-// directly on the server. This keeps the admin portal from ever being
-// reachable through a signup form.
-const AdminSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  name: String,
-}, {
-  timestamps: true,
+const router = express.Router();
+
+// ---------- Admin login ----------
+// No corresponding /register route exists anywhere — see
+// scripts/createAdmin.js for the only way an admin account gets made.
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    const admin = await Admin.findOne({ email });
+    if (!admin) {
+      return res.status(400).json({ message: 'Invalid credentials.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials.' });
+    }
+
+    const token = jwt.sign({ id: admin._id, role: 'admin' }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    res.json({ token, role: 'admin', name: admin.name || admin.email, id: admin._id });
+  } catch (error) {
+    console.error('Error during admin login:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
 });
 
-module.exports = mongoose.model('Admin', AdminSchema);
+// Everything below requires a valid admin session.
+router.use(requireAuth, requireRole('admin'));
+
+// ---------- Overview stats ----------
+router.get('/overview', async (req, res) => {
+  try {
+    const [pendingCount, approvedCount, rejectedCount, patientCount, appointmentCount] = await Promise.all([
+      Hospital.countDocuments({ verificationStatus: 'pending' }),
+      Hospital.countDocuments({ verificationStatus: 'approved' }),
+      Hospital.countDocuments({ verificationStatus: 'rejected' }),
+      Patient.countDocuments(),
+      Appointment.countDocuments(),
+    ]);
+    res.json({ pendingCount, approvedCount, rejectedCount, patientCount, appointmentCount });
+  } catch (error) {
+    console.error('Error fetching admin overview:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// ---------- Hospitals, filterable by verification status ----------
+router.get('/hospitals', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status) {
+      filter.verificationStatus = req.query.status;
+    }
+    const hospitals = await Hospital.find(filter)
+      .select('hospitalName loginId email city state address verificationStatus createdAt')
+      .sort({ createdAt: -1 });
+    res.json(hospitals);
+  } catch (error) {
+    console.error('Error fetching hospitals:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// ---------- Approve / reject a hospital ----------
+router.put('/hospitals/:id/verify', async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status.' });
+    }
+    const hospital = await Hospital.findByIdAndUpdate(
+      req.params.id,
+      { verificationStatus: status },
+      { new: true }
+    ).select('hospitalName loginId email verificationStatus');
+    if (!hospital) {
+      return res.status(404).json({ message: 'Hospital not found.' });
+    }
+
+    // Best-effort notification — doesn't block or fail the approval
+    // itself if email isn't configured or the hospital never set a
+    // contact email on their profile.
+    let emailSent = false;
+    if (hospital.email && (status === 'approved' || status === 'rejected')) {
+      try {
+        emailSent = await sendHospitalVerificationEmail(hospital.email, hospital.hospitalName, status);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError.message);
+      }
+    }
+
+    res.json({ ...hospital.toObject(), emailSent });
+  } catch (error) {
+    console.error('Error updating hospital verification:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// ---------- Patients (read-only oversight) ----------
+router.get('/patients', async (req, res) => {
+  try {
+    const patients = await Patient.find()
+      .select('fullName email contactNumber city createdAt')
+      .sort({ createdAt: -1 });
+    res.json(patients);
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+// ---------- Appointments, system-wide (read-only oversight) ----------
+router.get('/appointments', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+
+    const appointments = await Appointment.find(filter)
+      .populate('hospital', 'hospitalName city')
+      .populate('doctor', 'name specialization')
+      .sort({ createdAt: -1 })
+      .limit(200); // oversight view, not a full export — keep it reasonable
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+module.exports = router;

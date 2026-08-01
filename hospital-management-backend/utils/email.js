@@ -38,4 +38,31 @@ async function sendPasswordResetEmail(to, resetUrl) {
   return true;
 }
 
-module.exports = { sendPasswordResetEmail };
+// Same fallback behavior as sendPasswordResetEmail — returns false
+// (never throws) if email isn't configured, so the admin action still
+// succeeds even without SMTP set up; the hospital just won't get
+// notified until it is.
+async function sendHospitalVerificationEmail(to, hospitalName, status) {
+  const transporter = getTransporter();
+  if (!transporter) return false;
+
+  const approved = status === 'approved';
+  const subject = approved
+    ? 'Your hospital has been approved'
+    : 'Update on your hospital registration';
+  const bodyText = approved
+    ? `Good news — ${hospitalName} has been approved and can now log in to the Hospital Management System.`
+    : `Your registration for ${hospitalName} was not approved. Contact support if you have questions.`;
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to,
+    subject,
+    text: bodyText,
+    html: `<p>${bodyText}</p>`,
+  });
+
+  return true;
+}
+
+module.exports = { sendPasswordResetEmail, sendHospitalVerificationEmail };
