@@ -7,13 +7,15 @@ const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/jwt');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { loginLimiter } = require('../middleware/rateLimit');
+const { sendHospitalVerificationEmail } = require('../utils/email');
 
 const router = express.Router();
 
 // ---------- Admin login ----------
 // No corresponding /register route exists anywhere — see
 // scripts/createAdmin.js for the only way an admin account gets made.
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -86,17 +88,59 @@ router.put('/hospitals/:id/verify', async (req, res) => {
       req.params.id,
       { verificationStatus: status },
       { new: true }
-    ).select('hospitalName loginId verificationStatus');
+    ).select('hospitalName loginId email verificationStatus');
     if (!hospital) {
       return res.status(404).json({ message: 'Hospital not found.' });
     }
-    res.json(hospital);
+
+    // Best-effort notification — doesn't block or fail the approval
+    // itself if email isn't configured or the hospital never set a
+    // contact email on their profile.
+    let emailSent = false;
+    if (hospital.email && (status === 'approved' || status === 'rejected')) {
+      try {
+        emailSent = await sendHospitalVerificationEmail(hospital.email, hospital.hospitalName, status);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError.message);
+      }
+    }
+
+    res.json({ ...hospital.toObject(), emailSent });
   } catch (error) {
     console.error('Error updating hospital verification:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
 
-module.exports = router;
+// ---------- Patients (read-only oversight) ----------
+router.get('/patients', async (req, res) => {
+  try {
+    const patients = await Patient.find()
+      .select('fullName email contactNumber city createdAt')
+      .sort({ createdAt: -1 });
+    res.json(patients);
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
 
-// ---------- Notes ----------
+// ---------- Appointments, system-wide (read-only oversight) ----------
+router.get('/appointments', async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+
+    const appointments = await Appointment.find(filter)
+      .populate('hospital', 'hospitalName city')
+      .populate('doctor', 'name specialization')
+      .sort({ createdAt: -1 })
+      .limit(200); // oversight view, not a full export — keep it reasonable
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+module.exports = router;

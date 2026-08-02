@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const Patient = require('../models/Patient');
 const Hospital = require('../models/Hospital');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/jwt');
+const { loginLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -70,7 +71,7 @@ router.post('/register/patient', upload.single('profilePhoto'), async (req, res)
 });
 
 // ---------- Patient login ----------
-router.post('/login/patient', async (req, res) => {
+router.post('/login/patient', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -138,7 +139,7 @@ router.post('/register/hospital', async (req, res) => {
 });
 
 // ---------- Hospital login ----------
-router.post('/login/hospital', async (req, res) => {
+router.post('/login/hospital', loginLimiter, async (req, res) => {
   try {
     const { loginId, password } = req.body;
     if (!loginId || !password) {

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const Patient = require('../models/Patient');
 const Hospital = require('../models/Hospital');
 const { sendPasswordResetEmail } = require('../utils/email');
+const { forgotPasswordLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ function hashToken(rawToken) {
 // Patients look up by email; hospitals by their contact email (set on
 // the hospital's profile) since hospitals log in with a loginId, not
 // an email, and loginId alone isn't a safe way to verify identity.
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   try {
     const { role, email } = req.body;
     const Model = getModel(role);
