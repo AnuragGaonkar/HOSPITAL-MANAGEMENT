@@ -138,51 +138,87 @@ function HospitalsSection({ overview, setOverview }) {
   );
 }
 
+function Pagination({ page, pages, onChange }) {
+  if (pages <= 1) return null;
+  return (
+    <div className="admin-pagination">
+      <button type="button" onClick={() => onChange(page - 1)} disabled={page <= 1}>← Prev</button>
+      <span>Page {page} of {pages}</span>
+      <button type="button" onClick={() => onChange(page + 1)} disabled={page >= pages}>Next →</button>
+    </div>
+  );
+}
+
 function PatientsSection() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    adminApi.get('/admin/patients')
-      .then((res) => setPatients(res.data))
+    setLoading(true);
+    setError('');
+    const params = { page };
+    if (search.trim()) params.search = search.trim();
+    adminApi.get('/admin/patients', { params })
+      .then((res) => {
+        setPatients(res.data.items);
+        setPages(res.data.pages);
+        setTotal(res.data.total);
+      })
       .catch((err) => setError(err.response?.data?.message || 'Could not load patients.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, search]);
 
   return (
     <>
       <h2>Registered Patients</h2>
+      <div className="admin-filters-toolbar">
+        <input
+          type="text"
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+        />
+        <span className="admin-result-count">{total} total</span>
+      </div>
+
       {loading && <p className="admin-status">Loading patients…</p>}
       {error && <p className="admin-status error">{error}</p>}
       {!loading && patients.length === 0 && !error && (
-        <p className="admin-status">No patients registered yet.</p>
+        <p className="admin-status">No patients match this view.</p>
       )}
       {patients.length > 0 && (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Contact</th>
-                <th>City</th>
-                <th>Registered</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((p) => (
-                <tr key={p._id}>
-                  <td>{p.fullName}</td>
-                  <td>{p.email || '—'}</td>
-                  <td>{p.contactNumber || '—'}</td>
-                  <td>{p.city || '—'}</td>
-                  <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Contact</th>
+                  <th>City</th>
+                  <th>Registered</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {patients.map((p) => (
+                  <tr key={p._id}>
+                    <td>{p.fullName}</td>
+                    <td>{p.email || '—'}</td>
+                    <td>{p.contactNumber || '—'}</td>
+                    <td>{p.city || '—'}</td>
+                    <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} pages={pages} onChange={setPage} />
+        </>
       )}
     </>
   );
@@ -190,33 +226,53 @@ function PatientsSection() {
 
 function AppointmentsSection() {
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     setError('');
-    adminApi.get('/admin/appointments', { params: statusFilter ? { status: statusFilter } : {} })
-      .then((res) => setAppointments(res.data))
+    const params = { page };
+    if (statusFilter) params.status = statusFilter;
+    if (search.trim()) params.search = search.trim();
+    adminApi.get('/admin/appointments', { params })
+      .then((res) => {
+        setAppointments(res.data.items);
+        setPages(res.data.pages);
+        setTotal(res.data.total);
+      })
       .catch((err) => setError(err.response?.data?.message || 'Could not load appointments.'))
       .finally(() => setLoading(false));
-  }, [statusFilter]);
+  }, [statusFilter, search, page]);
 
   return (
     <>
-      <h2>Appointments (most recent 200)</h2>
+      <h2>Appointments</h2>
       <div className="admin-filter-tabs">
         {['', 'scheduled', 'completed', 'cancelled'].map((s) => (
           <button
             key={s || 'all'}
             type="button"
             className={statusFilter === s ? 'active' : ''}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => { setStatusFilter(s); setPage(1); }}
           >
             {s ? STATUS_LABEL[s] || s : 'All'}
           </button>
         ))}
+      </div>
+      <div className="admin-filters-toolbar">
+        <input
+          type="text"
+          placeholder="Search by patient name…"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+        />
+        <span className="admin-result-count">{total} total</span>
       </div>
 
       {loading && <p className="admin-status">Loading appointments…</p>}
@@ -225,32 +281,35 @@ function AppointmentsSection() {
         <p className="admin-status">No appointments in this view.</p>
       )}
       {appointments.length > 0 && (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Patient</th>
-                <th>Hospital</th>
-                <th>Doctor</th>
-                <th>Department</th>
-                <th>Date / Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((a) => (
-                <tr key={a._id}>
-                  <td>{a.patientName}{a.isEmergency && <span className="admin-emergency-tag"> 🚨</span>}</td>
-                  <td>{a.hospital?.hospitalName || '—'}</td>
-                  <td>{a.doctor?.name || '—'}</td>
-                  <td>{a.department}</td>
-                  <td>{a.date} · {a.time}</td>
-                  <td><span className={`admin-status-badge admin-status-${a.status === 'scheduled' ? 'pending' : a.status === 'completed' ? 'approved' : 'rejected'}`}>{a.status}</span></td>
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Hospital</th>
+                  <th>Doctor</th>
+                  <th>Department</th>
+                  <th>Date / Time</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {appointments.map((a) => (
+                  <tr key={a._id}>
+                    <td>{a.patientName}{a.isEmergency && <span className="admin-emergency-tag"> 🚨</span>}</td>
+                    <td>{a.hospital?.hospitalName || '—'}</td>
+                    <td>{a.doctor?.name || '—'}</td>
+                    <td>{a.department}</td>
+                    <td>{a.date} · {a.time}</td>
+                    <td><span className={`admin-status-badge admin-status-${a.status === 'scheduled' ? 'pending' : a.status === 'completed' ? 'approved' : 'rejected'}`}>{a.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} pages={pages} onChange={setPage} />
+        </>
       )}
     </>
   );
