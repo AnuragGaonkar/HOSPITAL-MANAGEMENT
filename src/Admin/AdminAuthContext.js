@@ -16,7 +16,6 @@ function readStoredAdmin() {
 
 // Completely separate from src/auth/AuthContext.js on purpose — own
 // storage keys, own provider. A patient/hospital login never touches
-// this, and this never touches theirs.
 export function AdminAuthProvider({ children }) {
   const [admin, setAdmin] = useState(readStoredAdmin);
 
