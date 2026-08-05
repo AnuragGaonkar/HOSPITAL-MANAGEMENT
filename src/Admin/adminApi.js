@@ -4,7 +4,6 @@ import axios from 'axios';
 // keys, different axios instance entirely. A patient or hospital
 // session token is never read here, and an admin token is never read
 // by the regular client. Neither can accidentally authenticate as the
-// other, even if both are open in the same browser at once.
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const adminApi = axios.create({ baseURL: API_BASE_URL });
