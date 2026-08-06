@@ -7,6 +7,7 @@ const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/jwt');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { loginLimiter } = require('../middleware/rateLimit');
 const { sendHospitalVerificationEmail } = require('../utils/email');
 
 const router = express.Router();
@@ -14,7 +15,7 @@ const router = express.Router();
 // ---------- Admin login ----------
 // No corresponding /register route exists anywhere — see
 // scripts/createAdmin.js for the only way an admin account gets made.
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -114,10 +115,25 @@ router.put('/hospitals/:id/verify', async (req, res) => {
 // ---------- Patients (read-only oversight) ----------
 router.get('/patients', async (req, res) => {
   try {
-    const patients = await Patient.find()
-      .select('fullName email contactNumber city createdAt')
-      .sort({ createdAt: -1 });
-    res.json(patients);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Number(req.query.limit) || 20);
+
+    const filter = {};
+    if (req.query.search) {
+      const re = new RegExp(req.query.search.trim(), 'i');
+      filter.$or = [{ fullName: re }, { email: re }];
+    }
+
+    const [patients, total] = await Promise.all([
+      Patient.find(filter)
+        .select('fullName email contactNumber city createdAt')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Patient.countDocuments(filter),
+    ]);
+
+    res.json({ items: patients, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
   } catch (error) {
     console.error('Error fetching patients:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
@@ -127,15 +143,26 @@ router.get('/patients', async (req, res) => {
 // ---------- Appointments, system-wide (read-only oversight) ----------
 router.get('/appointments', async (req, res) => {
   try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Number(req.query.limit) || 20);
+
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
+    if (req.query.search) {
+      filter.patientName = new RegExp(req.query.search.trim(), 'i');
+    }
 
-    const appointments = await Appointment.find(filter)
-      .populate('hospital', 'hospitalName city')
-      .populate('doctor', 'name specialization')
-      .sort({ createdAt: -1 })
-      .limit(200); // oversight view, not a full export — keep it reasonable
-    res.json(appointments);
+    const [appointments, total] = await Promise.all([
+      Appointment.find(filter)
+        .populate('hospital', 'hospitalName city')
+        .populate('doctor', 'name specialization')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Appointment.countDocuments(filter),
+    ]);
+
+    res.json({ items: appointments, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
   } catch (error) {
     console.error('Error fetching appointments:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
