@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const Patient = require('../models/Patient');
 const Hospital = require('../models/Hospital');
+const Admin = require('../models/Admin');
 const { sendPasswordResetEmail } = require('../utils/email');
 const { forgotPasswordLimiter } = require('../middleware/rateLimit');
 
@@ -15,6 +16,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function getModel(role) {
   if (role === 'patient') return Patient;
   if (role === 'hospital') return Hospital;
+  if (role === 'admin') return Admin;
   return null;
 }
 
@@ -52,7 +54,12 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
     account.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
     await account.save();
 
-    const resetPath = `/reset-password?role=${role}&token=${rawToken}`;
+    // Admin gets routed to its own separate reset page — kept apart
+    // from the patient/hospital one, same as the rest of the admin
+    // portal's isolation.
+    const resetPath = role === 'admin'
+      ? `/admin/reset-password?token=${rawToken}`
+      : `/reset-password?role=${role}&token=${rawToken}`;
     const resetUrl = `${FRONTEND_URL}${resetPath}`;
 
     let emailSent = false;
