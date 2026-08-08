@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import adminApi from './adminApi';
 import { useAdminAuth } from './AdminAuthContext';
 import './Admin.css';
@@ -62,6 +62,10 @@ export default function AdminLogin() {
             {submitting ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+
+        <p className="admin-login-sub" style={{ marginTop: 20 }}>
+          <Link to="/admin/forgot-password">Forgot password?</Link>
+        </p>
       </div>
     </div>
   );

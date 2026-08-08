@@ -21,6 +21,8 @@ import { AdminAuthProvider } from './Admin/AdminAuthContext';
 import AdminProtectedRoute from './Admin/AdminProtectedRoute';
 import AdminLogin from './Admin/AdminLogin';
 import AdminDashboard from './Admin/AdminDashboard';
+import AdminForgotPassword from './Admin/AdminForgotPassword';
+import AdminResetPassword from './Admin/AdminResetPassword';
 
 // The Home page (with its patient-facing "how to book" walkthrough) should
 // only greet logged-out visitors. Once someone's logged in, "/" should
@@ -76,6 +78,8 @@ function AppLayout() {
         {/* Admin portal — intentionally not linked from the Navbar anywhere.
             Reachable only by typing the URL directly. */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+        <Route path="/admin/reset-password" element={<AdminResetPassword />} />
         <Route
           path="/admin/dashboard"
           element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}
