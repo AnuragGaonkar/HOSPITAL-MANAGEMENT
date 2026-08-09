@@ -249,29 +249,6 @@
   color: var(--admin-muted);
 }
 
-.admin-filter-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 18px;
-}
-
-.admin-filter-tabs button {
-  background: var(--admin-surface);
-  border: 1px solid var(--admin-border);
-  color: var(--admin-muted);
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.admin-filter-tabs button.active {
-  background: var(--admin-accent);
-  border-color: var(--admin-accent);
-  color: #fff;
-}
-
 .admin-section-tabs {
   display: flex;
   gap: 6px;
@@ -297,8 +274,85 @@
   border-bottom-color: var(--admin-accent);
 }
 
+.admin-filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.admin-filter-tabs button {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-muted);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-filter-tabs button.active {
+  background: var(--admin-accent);
+  border-color: var(--admin-accent);
+  color: #fff;
+}
+
 .admin-emergency-tag {
   font-size: 11px;
+}
+
+.admin-filters-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-filters-toolbar input {
+  flex: 1;
+  max-width: 320px;
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-ink);
+  font-size: 13px;
+}
+
+.admin-filters-toolbar input:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+}
+
+.admin-result-count {
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+
+.admin-pagination button {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-ink);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .admin-table-wrap {
